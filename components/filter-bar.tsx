@@ -188,7 +188,7 @@ export function FilterBar({
           <Input
             type="number"
             min="1"
-            max="10"
+            max="5"
             value={filters.minRating ?? ""}
             onChange={(event) =>
               set({
@@ -206,7 +206,7 @@ export function FilterBar({
           <Input
             type="number"
             min="1"
-            max="10"
+            max="5"
             value={filters.maxRating ?? ""}
             onChange={(event) =>
               set({

@@ -60,7 +60,7 @@ function createDefaultVisit(visitedOn: string): VisitFields {
     bowlName: "",
     style: "tonkotsu",
     toppings: "",
-    ratingOverall: 8,
+    ratingOverall: 4,
     wouldRevisit: true,
     comment: "",
   }
@@ -390,7 +390,7 @@ function OptionalRating({
 }) {
   return (
     <div className="grid gap-2">
-      <RatingInput label={label} value={value ?? 5} onChange={onChange} />
+      <RatingInput label={label} value={value ?? 3} onChange={onChange} />
       <Button
         type="button"
         variant="outline"
