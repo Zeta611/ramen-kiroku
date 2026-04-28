@@ -1,7 +1,7 @@
 "use client"
 
 import { SignInButton, UserButton, useUser } from "@clerk/nextjs"
-import { RiAddLine, RiStore2Line } from "@remixicon/react"
+import { RiAddLine, RiStore2Line, RiUserLine } from "@remixicon/react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -12,8 +12,8 @@ export function SiteHeader() {
   const { isLoaded, isSignedIn } = useUser()
 
   return (
-    <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
+    <header className="sticky top-0 z-30 bg-background/95 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-3">
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <Image
             src="/logo.png"
@@ -24,11 +24,11 @@ export function SiteHeader() {
           />
           <span className="font-heading text-lg">Ramen Kiroku</span>
         </Link>
-        <nav className="flex items-center gap-2">
+        <nav className="flex items-center gap-0.5">
           <Button asChild variant="ghost" size="sm">
             <Link href="/shops">
               <RiStore2Line />
-              Shops
+              <span className="hidden sm:block">Shops</span>
             </Link>
           </Button>
           <OwnerOnly>
@@ -60,12 +60,11 @@ function OwnerOnlyFallback({
   if (!isLoaded || isSignedIn) return null
 
   return (
-    <div className="hidden sm:block">
-      <SignInButton mode="modal">
-        <Button variant="outline" size="sm">
-          Sign in
-        </Button>
-      </SignInButton>
-    </div>
+    <SignInButton mode="modal">
+      <Button variant="ghost" size="sm">
+        <RiUserLine  />
+        <span className="hidden sm:block">Sign in</span>
+      </Button>
+    </SignInButton>
   )
 }
