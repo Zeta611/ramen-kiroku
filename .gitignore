@@ -42,3 +42,15 @@ next-env.d.ts
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# Claude Code skills (reinstallable from skills-lock.json)
+.agents/
+.claude/skills/
+skills/
+
+# Claude Code personal state
+.claude/settings.local.json
+.claude/projects/
+
+# MCP config (may contain secrets or personal paths)
+.mcp.json
