@@ -41,14 +41,14 @@ export function VisitCard({ visit }: VisitCardProps) {
         )}
       </div>
       <div className="grid gap-2 p-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-3">
             <h2 className="truncate text-sm font-semibold">{visit.bowlName}</h2>
-            <p className="truncate text-xs text-muted-foreground">
-              {visit.shopName} · {visit.area}
-            </p>
+            <StyleChip style={visit.style} />
           </div>
-          <StyleChip style={visit.style} />
+          <p className="truncate text-xs text-muted-foreground">
+            {visit.shopName} · {visit.area}
+          </p>
         </div>
         <div className="flex flex-col gap-0.5">
           <StarRatingDisplay value={visit.ratingOverall} />

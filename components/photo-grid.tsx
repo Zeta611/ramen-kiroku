@@ -19,9 +19,6 @@ export function PhotoGrid({ visits }: { visits: Visit[] }) {
       <div className="flex min-h-[45svh] items-center justify-center border border-dashed p-8 text-center">
         <div className="grid max-w-sm gap-2">
           <h2 className="font-heading text-2xl">No bowls logged yet</h2>
-          <p className="text-sm text-muted-foreground">
-            Public feed is ready. Sign in as Jay to add the first visit.
-          </p>
         </div>
       </div>
     )

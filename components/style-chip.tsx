@@ -7,7 +7,7 @@ export function StyleChip({ style }: { style: RamenStyle }) {
     <Badge
       variant="outline"
       className={cn(
-        "rounded-none tracking-widest uppercase",
+        "rounded-xs px-1 tracking-widest uppercase",
         STYLE_CHIP_CLASSES[style]
       )}
     >
