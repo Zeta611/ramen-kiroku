@@ -1,8 +1,9 @@
 "use client"
 
 import { SignInButton, UserButton, useUser } from "@clerk/nextjs"
-import { RiAddLine, RiBowlLine, RiStore2Line } from "@remixicon/react"
+import { RiAddLine, RiStore2Line } from "@remixicon/react"
 import Link from "next/link"
+import Image from "next/image"
 
 import { OwnerOnly } from "@/components/owner-only"
 import { Button } from "@/components/ui/button"
@@ -14,7 +15,13 @@ export function SiteHeader() {
     <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
         <Link href="/" className="flex shrink-0 items-center gap-2">
-          <RiBowlLine className="size-5 text-primary" />
+          <Image
+            src="/logo.png"
+            alt="Ramen Kiroku logo"
+            width={40}
+            height={40}
+            className="size-9 object-contain"
+          />
           <span className="font-heading text-lg">Ramen Kiroku</span>
         </Link>
         <nav className="flex items-center gap-2">

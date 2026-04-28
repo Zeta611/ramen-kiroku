@@ -36,10 +36,7 @@ function assertHttpsUrl(value: string | undefined, label: string) {
   throw new Error(`${label} must be a valid https URL`)
 }
 
-function assertShopUrls(shop: {
-  googleMapsUrl?: string
-  tabelogUrl?: string
-}) {
+function assertShopUrls(shop: { googleMapsUrl?: string; tabelogUrl?: string }) {
   assertHttpsUrl(shop.googleMapsUrl, "Google Maps URL")
   assertHttpsUrl(shop.tabelogUrl, "Tabelog URL")
 }
