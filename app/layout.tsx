@@ -1,6 +1,7 @@
 import { ClerkProvider } from "@clerk/nextjs"
 import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin"
 import { Geist_Mono, Noto_Sans, Playfair_Display } from "next/font/google"
+import type { Viewport } from "next"
 import { extractRouterConfig } from "uploadthing/server"
 
 import "./globals.css"
@@ -22,6 +23,15 @@ const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
+
+export const viewport: Viewport = {
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#1f1b18" },
+  ],
+  viewportFit: "cover",
+}
 
 export default function RootLayout({
   children,
