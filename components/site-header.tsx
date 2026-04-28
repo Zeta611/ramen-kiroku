@@ -64,7 +64,7 @@ function OwnerOnlyFallback({
   return (
     <SignInButton mode="modal">
       <Button variant="ghost" size="sm">
-        <RiUserLine  />
+        <RiUserLine />
         <span className="hidden sm:block">Sign in</span>
       </Button>
     </SignInButton>
