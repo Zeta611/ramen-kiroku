@@ -31,15 +31,17 @@ export function SiteHeader() {
               <span className="hidden sm:block">Shops</span>
             </Link>
           </Button>
-          <OwnerOnly>
-            <Button asChild size="sm">
-              <Link href="/new">
-                <RiAddLine />
-                New
-              </Link>
-            </Button>
-          </OwnerOnly>
-          {isLoaded && isSignedIn ? <UserButton /> : null}
+          <span className="flex items-center gap-3">
+            <OwnerOnly>
+              <Button asChild size="sm">
+                <Link href="/new">
+                  <RiAddLine />
+                  New
+                </Link>
+              </Button>
+            </OwnerOnly>
+            {isLoaded && isSignedIn ? <UserButton /> : null}
+          </span>
           <OwnerOnlyFallback
             isLoaded={isLoaded}
             isSignedIn={Boolean(isSignedIn)}
