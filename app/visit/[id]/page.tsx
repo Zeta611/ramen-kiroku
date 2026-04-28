@@ -86,9 +86,9 @@ export default function VisitDetailPage() {
         <div className="grid content-start gap-3">
           <StarRatingDisplay value={visit.ratingOverall} />
           <div className="grid gap-1 text-sm">
-            <p>Broth: {visit.ratingBroth?.toFixed(1) ?? "n/a"}</p>
-            <p>Noodles: {visit.ratingNoodles?.toFixed(1) ?? "n/a"}</p>
-            <p>Toppings: {visit.ratingToppings?.toFixed(1) ?? "n/a"}</p>
+            <p>Broth: {visit.ratingBroth ?? "n/a"}</p>
+            <p>Noodles: {visit.ratingNoodles ?? "n/a"}</p>
+            <p>Toppings: {visit.ratingToppings ?? "n/a"}</p>
             <p>{visit.wouldRevisit ? "Would revisit" : "Would not revisit"}</p>
           </div>
           {visit.pricePaid ? (

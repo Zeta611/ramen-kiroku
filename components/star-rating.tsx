@@ -12,22 +12,20 @@ export function StarRatingDisplay({
   value: number
   className?: string
 }) {
-  const rounded = Math.round(value / 2)
-
   return (
     <div
       className={cn("flex items-center gap-1 text-primary", className)}
-      aria-label={`${value} out of 10`}
+      aria-label={`${value} out of 5`}
     >
       {Array.from({ length: 5 }).map((_, index) =>
-        index < rounded ? (
+        index < value ? (
           <RiStarFill key={index} className="size-4" />
         ) : (
           <RiStarLine key={index} className="size-4" />
         )
       )}
       <span className="ml-1 font-mono text-xs text-muted-foreground">
-        {value.toFixed(1)}
+        {value}
       </span>
     </div>
   )
@@ -48,10 +46,10 @@ export function RatingInput({
         <label className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
           {label}
         </label>
-        <span className="font-mono text-xs">{value.toFixed(1)}/10</span>
+        <span className="font-mono text-xs">{value}/5</span>
       </div>
       <div className="flex flex-wrap gap-1">
-        {Array.from({ length: 10 }).map((_, index) => {
+        {Array.from({ length: 5 }).map((_, index) => {
           const rating = index + 1
           return (
             <Button
@@ -59,7 +57,7 @@ export function RatingInput({
               type="button"
               variant={rating <= value ? "default" : "outline"}
               size="icon-xs"
-              aria-label={`${label} ${rating} out of 10`}
+              aria-label={`${label} ${rating} out of 5`}
               onClick={() => onChange(rating)}
             >
               {rating}
