@@ -31,8 +31,23 @@ const sort = v.union(
   v.literal("rating_asc"),
   v.literal("created_desc")
 )
+const placeSort = v.union(v.literal("name_asc"), v.literal("created_desc"))
 
 const shopFields = {
+  name: v.string(),
+  nameJa: v.optional(v.string()),
+  country,
+  city: v.string(),
+  area: v.string(),
+  addressLine: v.optional(v.string()),
+  lat: v.optional(v.number()),
+  lng: v.optional(v.number()),
+  googleMapsUrl: v.optional(v.string()),
+  tabelogUrl: v.optional(v.string()),
+  wishlisted: v.optional(v.boolean()),
+}
+
+const wishlistShopFields = {
   name: v.string(),
   nameJa: v.optional(v.string()),
   country,
@@ -65,6 +80,23 @@ function assertHttpsUrl(value: string | undefined, label: string) {
 function assertShopUrls(shop: { googleMapsUrl?: string; tabelogUrl?: string }) {
   assertHttpsUrl(shop.googleMapsUrl, "Google Maps URL")
   assertHttpsUrl(shop.tabelogUrl, "Tabelog URL")
+}
+
+function matchesShopIdentity(
+  shop: Doc<"shops">,
+  args: {
+    name: string
+    country: "JP" | "KR"
+    city: string
+    area: string
+  }
+) {
+  return (
+    normalize(shop.name) === normalize(args.name) &&
+    normalize(shop.area) === normalize(args.area) &&
+    normalize(shop.city) === normalize(args.city) &&
+    shop.country === args.country
+  )
 }
 
 async function summarizeShop(ctx: QueryCtx, shop: Doc<"shops">) {
@@ -309,6 +341,57 @@ export const browse = query({
       lng: shop.lng,
       googleMapsUrl: shop.googleMapsUrl,
       tabelogUrl: shop.tabelogUrl,
+      wishlisted: shop.wishlisted,
+      visitCount: shop.visitCount,
+      latestVisit: shop.latestVisit,
+      latestPhoto: shop.latestPhoto,
+    }))
+  },
+})
+
+export const wishlistBrowse = query({
+  args: {
+    country: v.optional(country),
+    city: v.optional(v.string()),
+    area: v.optional(v.string()),
+    sort: v.optional(placeSort),
+  },
+  handler: async (ctx, args) => {
+    let shops = (await ctx.db.query("shops").collect()).filter(
+      (shop) => shop.wishlisted === true
+    )
+
+    if (args.country)
+      shops = shops.filter((shop) => shop.country === args.country)
+    if (args.city) shops = shops.filter((shop) => shop.city === args.city)
+    if (args.area) shops = shops.filter((shop) => shop.area === args.area)
+
+    const summarized = await Promise.all(
+      shops.map((shop) => summarizeShop(ctx, shop))
+    )
+
+    const sortBy = args.sort ?? "name_asc"
+    summarized.sort((a, b) => {
+      if (sortBy === "created_desc") {
+        return b._creationTime - a._creationTime || a.name.localeCompare(b.name)
+      }
+      return a.name.localeCompare(b.name)
+    })
+
+    return summarized.map((shop) => ({
+      _id: shop._id,
+      _creationTime: shop._creationTime,
+      name: shop.name,
+      nameJa: shop.nameJa,
+      country: shop.country,
+      city: shop.city,
+      area: shop.area,
+      addressLine: shop.addressLine,
+      lat: shop.lat,
+      lng: shop.lng,
+      googleMapsUrl: shop.googleMapsUrl,
+      tabelogUrl: shop.tabelogUrl,
+      wishlisted: shop.wishlisted,
       visitCount: shop.visitCount,
       latestVisit: shop.latestVisit,
       latestPhoto: shop.latestPhoto,
@@ -368,17 +451,43 @@ export const findOrCreate = mutation({
       )
       .collect()
 
-    const match = existing.find(
-      (shop) =>
-        normalize(shop.name) === normalize(args.name) &&
-        normalize(shop.area) === normalize(args.area) &&
-        normalize(shop.city) === normalize(args.city) &&
-        shop.country === args.country
-    )
+    const match = existing.find((shop) => matchesShopIdentity(shop, args))
 
     if (match) return match._id
 
     return ctx.db.insert("shops", args)
+  },
+})
+
+export const addToWishlist = mutation({
+  args: wishlistShopFields,
+  handler: async (ctx, args) => {
+    await requireOwner(ctx)
+    assertShopUrls(args)
+
+    const existing = await ctx.db
+      .query("shops")
+      .withIndex("by_name_area", (q) =>
+        q.eq("name", args.name).eq("area", args.area)
+      )
+      .collect()
+
+    const match = existing.find((shop) => matchesShopIdentity(shop, args))
+
+    if (match) {
+      await ctx.db.patch(match._id, { ...args, wishlisted: true })
+      return match._id
+    }
+
+    return ctx.db.insert("shops", { ...args, wishlisted: true })
+  },
+})
+
+export const removeFromWishlist = mutation({
+  args: { id: v.id("shops") },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx)
+    await ctx.db.patch(args.id, { wishlisted: false })
   },
 })
 

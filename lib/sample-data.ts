@@ -37,6 +37,7 @@ export type SampleVisit = {
 
 export type SampleShop = {
   _id: string
+  _creationTime?: number
   name: string
   nameJa?: string
   country: "JP" | "KR"
@@ -68,6 +69,7 @@ const tsukemenPhoto: SamplePhoto = {
 export const SAMPLE_SHOPS: SampleShop[] = [
   {
     _id: "sample-shop-hongdae",
+    _creationTime: Date.parse("2026-04-18"),
     name: "Showa Menjo",
     nameJa: "昭和麺所",
     country: "KR",
@@ -78,12 +80,38 @@ export const SAMPLE_SHOPS: SampleShop[] = [
   },
   {
     _id: "sample-shop-ebisu",
+    _creationTime: Date.parse("2026-04-25"),
     name: "Menya Ebisu",
     nameJa: "麺屋 恵比寿",
     country: "JP",
     city: "Tokyo",
     area: "Ebisu",
     addressLine: "Sample address near Ebisu Station",
+    tabelogUrl: "https://tabelog.com",
+  },
+]
+
+export const SAMPLE_WISHLIST_SHOPS: SampleShop[] = [
+  {
+    _id: "sample-wishlist-shop-yeonnam",
+    _creationTime: Date.parse("2026-04-29"),
+    name: "Mendokoro Hikari",
+    nameJa: "麺処 光",
+    country: "KR",
+    city: "Seoul",
+    area: "Yeonnam",
+    addressLine: "Sample address near Yeonnam-dong",
+    googleMapsUrl: "https://maps.google.com",
+  },
+  {
+    _id: "sample-wishlist-shop-nakano",
+    _creationTime: Date.parse("2026-04-28"),
+    name: "Ramen Koubou Nagi",
+    nameJa: "ラーメン工房 凪",
+    country: "JP",
+    city: "Tokyo",
+    area: "Nakano",
+    addressLine: "Sample address near Nakano Station",
     tabelogUrl: "https://tabelog.com",
   },
 ]

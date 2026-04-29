@@ -1,7 +1,7 @@
 "use client"
 
 import { UserButton, useUser } from "@clerk/nextjs"
-import { RiAddLine, RiMap2Line } from "@remixicon/react"
+import { RiAddLine, RiBookmarkLine, RiMap2Line } from "@remixicon/react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -27,15 +27,21 @@ export function SiteHeader() {
         <nav className="flex items-center gap-0.5">
           <Button asChild variant="ghost" size="sm">
             <Link href="/map">
-              <RiMap2Line />
+              <RiMap2Line data-icon="inline-start" />
               <span className="hidden sm:block">Map</span>
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/wishlist">
+              <RiBookmarkLine data-icon="inline-start" />
+              <span className="hidden sm:block">Wishlist</span>
             </Link>
           </Button>
           <span className="flex items-center gap-3">
             <OwnerOnly>
               <Button asChild size="sm">
                 <Link href="/new">
-                  <RiAddLine />
+                  <RiAddLine data-icon="inline-start" />
                   New
                 </Link>
               </Button>

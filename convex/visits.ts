@@ -117,6 +117,10 @@ async function findOrCreateShop(ctx: MutationCtx, shop: ShopInput) {
   if (shop.id) {
     const existing = await ctx.db.get(shop.id)
     if (!existing) throw new Error("Shop not found")
+    if (existing.wishlisted === true) {
+      await ctx.db.patch(existing._id, { wishlisted: false })
+      return { ...existing, wishlisted: false }
+    }
     return existing
   }
 
@@ -135,7 +139,13 @@ async function findOrCreateShop(ctx: MutationCtx, shop: ShopInput) {
       candidate.country === shop.country
   )
 
-  if (match) return match
+  if (match) {
+    if (match.wishlisted === true) {
+      await ctx.db.patch(match._id, { wishlisted: false })
+      return { ...match, wishlisted: false }
+    }
+    return match
+  }
 
   const shopId = await ctx.db.insert("shops", {
     name: shop.name,

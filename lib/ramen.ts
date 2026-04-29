@@ -65,3 +65,17 @@ export const SORT_OPTIONS = [
 ] as const
 
 export type VisitSort = (typeof SORT_OPTIONS)[number]["value"]
+
+export const PLACE_SORT_OPTIONS = [
+  { value: "name_asc", label: "Name" },
+  { value: "created_desc", label: "Recently added" },
+] as const
+
+export type PlaceSort = (typeof PLACE_SORT_OPTIONS)[number]["value"]
+
+export type PlaceFilters = {
+  country?: CountryCode
+  city?: string
+  area?: string
+  sort: PlaceSort
+}

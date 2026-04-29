@@ -22,7 +22,7 @@ export type GoogleMapMarker = {
 
 function GoogleShopMarker({ name }: { name: string }) {
   return (
-    <div className="flex items-center gap-1.5 whitespace-nowrap font-sans">
+    <div className="flex items-center gap-1.5 font-sans whitespace-nowrap">
       <span className="block size-3.5 rounded-full border-[3px] border-white bg-blue-600 shadow-[0_1px_4px_rgba(0,0,0,.35)]" />
       <span className="block max-w-40 overflow-hidden rounded border border-black/15 bg-white px-2 py-1 text-xs leading-tight font-bold text-neutral-900 shadow-[0_1px_5px_rgba(0,0,0,.24)]">
         {name}

@@ -29,6 +29,7 @@ export default defineSchema({
     lng: v.optional(v.number()),
     googleMapsUrl: v.optional(v.string()),
     tabelogUrl: v.optional(v.string()),
+    wishlisted: v.optional(v.boolean()),
   })
     .index("by_country_city", ["country", "city"])
     .index("by_area", ["area"])
