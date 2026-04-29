@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation } from "convex/react"
+import { useAction, useMutation } from "convex/react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { toast } from "sonner"
@@ -40,11 +40,46 @@ export function ShopForm({
 }) {
   const router = useRouter()
   const updateShop = useMutation(api.shops.update)
+  const geocodeAddress = useAction(api.naver.geocodeAddress)
   const [shop, setShop] = React.useState<ShopFormFields>(initial)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [isGeocoding, setIsGeocoding] = React.useState(false)
 
   function update(patch: Partial<ShopFormFields>) {
     setShop((current) => ({ ...current, ...patch }))
+  }
+
+  async function onGeocode() {
+    const address = shop.addressLine?.trim()
+    if (!address) {
+      toast.error("Add an address first")
+      return
+    }
+    if (shop.country !== "KR") {
+      toast.error("Naver geocoding only supports Korean addresses")
+      return
+    }
+
+    setIsGeocoding(true)
+    try {
+      const result = await geocodeAddress({ address })
+      if (!result) {
+        toast.error("Naver returned no match for that address")
+        return
+      }
+      update({ lat: result.lat, lng: result.lng })
+      toast.success(
+        result.matchedAddress
+          ? `Matched: ${result.matchedAddress}`
+          : "Coordinates filled from Naver"
+      )
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Geocoding failed"
+      toast.error(message)
+    } finally {
+      setIsGeocoding(false)
+    }
   }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -135,13 +170,51 @@ export function ShopForm({
           />
         </div>
 
-        <Field
-          label="Address"
-          value={shop.addressLine ?? ""}
-          onChange={(addressLine) =>
-            update({ addressLine: addressLine || undefined })
-          }
-        />
+        <div className="grid gap-2">
+          <label className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+            Address
+          </label>
+          <div className="flex gap-2">
+            <Input
+              className="flex-1"
+              value={shop.addressLine ?? ""}
+              onChange={(event) =>
+                update({
+                  addressLine: event.target.value || undefined,
+                })
+              }
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onGeocode}
+              disabled={
+                isGeocoding ||
+                !shop.addressLine?.trim() ||
+                shop.country !== "KR"
+              }
+              title={
+                shop.country === "KR"
+                  ? "Look up lat/lng from Naver"
+                  : "Naver geocoding is KR-only for now"
+              }
+            >
+              {isGeocoding ? "Geocoding…" : "Geocode"}
+            </Button>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <NumberField
+            label="Latitude"
+            value={shop.lat}
+            onChange={(lat) => update({ lat })}
+          />
+          <NumberField
+            label="Longitude"
+            value={shop.lng}
+            onChange={(lng) => update({ lng })}
+          />
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field
             label="Google Maps URL"
@@ -192,6 +265,38 @@ function Field({
         value={value}
         required={required}
         onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  )
+}
+
+function NumberField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: number | undefined
+  onChange: (value: number | undefined) => void
+}) {
+  return (
+    <div className="grid gap-2">
+      <label className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+        {label}
+      </label>
+      <Input
+        type="number"
+        step="any"
+        value={value ?? ""}
+        onChange={(event) => {
+          const raw = event.target.value
+          if (raw === "") {
+            onChange(undefined)
+            return
+          }
+          const parsed = Number(raw)
+          onChange(Number.isFinite(parsed) ? parsed : undefined)
+        }}
       />
     </div>
   )

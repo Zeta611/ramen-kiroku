@@ -1,6 +1,12 @@
 import { v } from "convex/values"
 
-import { mutation, query, type QueryCtx } from "./_generated/server"
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  type QueryCtx,
+} from "./_generated/server"
 import type { Doc, Id } from "./_generated/dataModel"
 import { requireOwner } from "./lib/auth"
 
@@ -183,5 +189,42 @@ export const update = mutation({
         })
       )
     )
+  },
+})
+
+export const listMissingCoordinates = internalQuery({
+  args: { country },
+  handler: async (ctx, args) => {
+    const shops = await ctx.db
+      .query("shops")
+      .withIndex("by_country_city", (q) => q.eq("country", args.country))
+      .collect()
+
+    return shops
+      .filter(
+        (shop): shop is Doc<"shops"> & { addressLine: string } =>
+          shop.lat === undefined &&
+          shop.lng === undefined &&
+          typeof shop.addressLine === "string" &&
+          shop.addressLine.trim().length > 0
+      )
+      .map((shop) => ({
+        _id: shop._id,
+        name: shop.name,
+        area: shop.area,
+        city: shop.city,
+        addressLine: shop.addressLine,
+      }))
+  },
+})
+
+export const setCoordinates = internalMutation({
+  args: {
+    id: v.id("shops"),
+    lat: v.number(),
+    lng: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { lat: args.lat, lng: args.lng })
   },
 })

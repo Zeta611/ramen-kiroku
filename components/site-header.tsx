@@ -1,7 +1,7 @@
 "use client"
 
-import { SignInButton, UserButton, useUser } from "@clerk/nextjs"
-import { RiAddLine, RiStore2Line, RiUserLine } from "@remixicon/react"
+import { UserButton, useUser } from "@clerk/nextjs"
+import { RiAddLine, RiMap2Line, RiStore2Line } from "@remixicon/react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -31,6 +31,12 @@ export function SiteHeader() {
               <span className="hidden sm:block">Shops</span>
             </Link>
           </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/map">
+              <RiMap2Line />
+              <span className="hidden sm:block">Map</span>
+            </Link>
+          </Button>
           <span className="flex items-center gap-3">
             <OwnerOnly>
               <Button asChild size="sm">
@@ -42,31 +48,8 @@ export function SiteHeader() {
             </OwnerOnly>
             {isLoaded && isSignedIn ? <UserButton /> : null}
           </span>
-          <OwnerOnlyFallback
-            isLoaded={isLoaded}
-            isSignedIn={Boolean(isSignedIn)}
-          />
         </nav>
       </div>
     </header>
-  )
-}
-
-function OwnerOnlyFallback({
-  isLoaded,
-  isSignedIn,
-}: {
-  isLoaded: boolean
-  isSignedIn: boolean
-}) {
-  if (!isLoaded || isSignedIn) return null
-
-  return (
-    <SignInButton mode="modal">
-      <Button variant="ghost" size="sm">
-        <RiUserLine />
-        <span className="hidden sm:block">Sign in</span>
-      </Button>
-    </SignInButton>
   )
 }

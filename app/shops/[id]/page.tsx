@@ -6,6 +6,7 @@ import { useParams } from "next/navigation"
 
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
+import { NaverMap } from "@/components/naver-map"
 import { OwnerOnly } from "@/components/owner-only"
 import { PhotoGrid } from "@/components/photo-grid"
 import { Button } from "@/components/ui/button"
@@ -73,6 +74,24 @@ export default function ShopDetailPage() {
           )}
         </div>
       </div>
+      {shop.country === "KR" &&
+      "lat" in shop &&
+      "lng" in shop &&
+      shop.lat != null &&
+      shop.lng != null ? (
+        <NaverMap
+          markers={[
+            {
+              shopId: shop._id as Id<"shops">,
+              name: shop.name,
+              nameJa: shop.nameJa,
+              lat: shop.lat,
+              lng: shop.lng,
+            },
+          ]}
+          zoom={16}
+        />
+      ) : null}
       <PhotoGrid visits={visits} />
     </main>
   )
