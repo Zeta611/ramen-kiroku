@@ -40,7 +40,8 @@ export function ShopForm({
 }) {
   const router = useRouter()
   const updateShop = useMutation(api.shops.update)
-  const geocodeAddress = useAction(api.naver.geocodeAddress)
+  const geocodeKoreanAddress = useAction(api.naver.geocodeAddress)
+  const geocodeJapaneseAddress = useAction(api.google.geocodeAddress)
   const [shop, setShop] = React.useState<ShopFormFields>(initial)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isGeocoding, setIsGeocoding] = React.useState(false)
@@ -55,23 +56,22 @@ export function ShopForm({
       toast.error("Add an address first")
       return
     }
-    if (shop.country !== "KR") {
-      toast.error("Naver geocoding only supports Korean addresses")
-      return
-    }
-
     setIsGeocoding(true)
     try {
-      const result = await geocodeAddress({ address })
+      const provider = shop.country === "JP" ? "Google" : "Naver"
+      const result =
+        shop.country === "JP"
+          ? await geocodeJapaneseAddress({ address, country: "JP" })
+          : await geocodeKoreanAddress({ address })
       if (!result) {
-        toast.error("Naver returned no match for that address")
+        toast.error(`${provider} returned no match for that address`)
         return
       }
       update({ lat: result.lat, lng: result.lng })
       toast.success(
         result.matchedAddress
           ? `Matched: ${result.matchedAddress}`
-          : "Coordinates filled from Naver"
+          : `Coordinates filled from ${provider}`
       )
     } catch (error) {
       const message =
@@ -189,14 +189,12 @@ export function ShopForm({
               variant="outline"
               onClick={onGeocode}
               disabled={
-                isGeocoding ||
-                !shop.addressLine?.trim() ||
-                shop.country !== "KR"
+                isGeocoding || !shop.addressLine?.trim()
               }
               title={
                 shop.country === "KR"
                   ? "Look up lat/lng from Naver"
-                  : "Naver geocoding is KR-only for now"
+                  : "Look up lat/lng from Google"
               }
             >
               {isGeocoding ? "Geocoding…" : "Geocode"}

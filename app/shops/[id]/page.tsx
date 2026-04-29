@@ -6,6 +6,7 @@ import { useParams } from "next/navigation"
 
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
+import { GoogleMap } from "@/components/google-map"
 import { NaverMap } from "@/components/naver-map"
 import { OwnerOnly } from "@/components/owner-only"
 import { PhotoGrid } from "@/components/photo-grid"
@@ -34,6 +35,16 @@ export default function ShopDetailPage() {
   }
 
   const { shop, visits } = data
+  const marker =
+    "lat" in shop && "lng" in shop && shop.lat != null && shop.lng != null
+      ? {
+          shopId: shop._id as Id<"shops">,
+          name: shop.name,
+          nameJa: shop.nameJa,
+          lat: shop.lat,
+          lng: shop.lng,
+        }
+      : null
 
   return (
     <main className="mx-auto grid max-w-6xl gap-6 px-4 py-6">
@@ -74,23 +85,10 @@ export default function ShopDetailPage() {
           )}
         </div>
       </div>
-      {shop.country === "KR" &&
-      "lat" in shop &&
-      "lng" in shop &&
-      shop.lat != null &&
-      shop.lng != null ? (
-        <NaverMap
-          markers={[
-            {
-              shopId: shop._id as Id<"shops">,
-              name: shop.name,
-              nameJa: shop.nameJa,
-              lat: shop.lat,
-              lng: shop.lng,
-            },
-          ]}
-          zoom={16}
-        />
+      {marker && shop.country === "KR" ? (
+        <NaverMap markers={[marker]} zoom={16} />
+      ) : marker && shop.country === "JP" ? (
+        <GoogleMap markers={[marker]} zoom={16} />
       ) : null}
       <PhotoGrid visits={visits} />
     </main>

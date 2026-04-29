@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as google from "../google.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as naver from "../naver.js";
 import type * as photos from "../photos.js";
@@ -21,6 +22,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  google: typeof google;
   "lib/auth": typeof lib_auth;
   naver: typeof naver;
   photos: typeof photos;

@@ -4,6 +4,7 @@ import { useQuery } from "convex/react"
 import * as React from "react"
 
 import { FilterBar, type FeedFilters } from "@/components/filter-bar"
+import { GoogleMap, type GoogleMapMarker } from "@/components/google-map"
 import { NaverMap, type NaverMapMarker } from "@/components/naver-map"
 import { ShopCard } from "@/components/shop-card"
 import { api } from "@/convex/_generated/api"
@@ -100,7 +101,7 @@ export default function MapPage() {
     : realShops
   const selectedCountry = filters.country ?? "KR"
 
-  const markers = React.useMemo<NaverMapMarker[]>(() => {
+  const naverMarkers = React.useMemo<NaverMapMarker[]>(() => {
     if (!realShops || selectedCountry !== "KR" || showSamples) return []
 
     const result: NaverMapMarker[] = []
@@ -117,17 +118,34 @@ export default function MapPage() {
     return result
   }, [realShops, selectedCountry, showSamples])
 
+  const googleMarkers = React.useMemo<GoogleMapMarker[]>(() => {
+    if (!realShops || selectedCountry !== "JP" || showSamples) return []
+
+    const result: GoogleMapMarker[] = []
+    for (const shop of realShops) {
+      if (shop.lat == null || shop.lng == null) continue
+      result.push({
+        shopId: shop._id,
+        name: shop.name,
+        nameJa: shop.nameJa,
+        lat: shop.lat,
+        lng: shop.lng,
+      })
+    }
+    return result
+  }, [realShops, selectedCountry, showSamples])
+
+  const activeMarkers =
+    selectedCountry === "JP" ? googleMarkers : naverMarkers
   const missingCoords =
-    selectedCountry === "KR" && displayShops && !showSamples
-      ? displayShops.length - markers.length
+    displayShops && !showSamples
+      ? displayShops.length - activeMarkers.length
       : 0
 
   const mapSummary =
-    selectedCountry === "JP"
-      ? "Japan map support is coming later."
-      : displayShops === undefined
+    displayShops === undefined
         ? "Loading shops"
-        : `${markers.length} shown on map${
+        : `${activeMarkers.length} shown on map${
             missingCoords > 0 ? ` · ${missingCoords} missing coordinates` : ""
           }`
 
@@ -149,11 +167,6 @@ export default function MapPage() {
         <div>
           {displayShops === undefined ? (
             <MapState>Loading shops</MapState>
-          ) : selectedCountry === "JP" ? (
-            <MapState>
-              Japan map support is coming later. Shops are listed alongside the
-              map.
-            </MapState>
           ) : displayShops.length === 0 ? (
             <MapState>No shops match these filters.</MapState>
           ) : showSamples ? (
@@ -161,13 +174,22 @@ export default function MapPage() {
               Sample shops do not include coordinates. Shops are listed
               alongside the map.
             </MapState>
-          ) : markers.length === 0 ? (
+          ) : activeMarkers.length === 0 ? (
             <MapState>
-              Matching Korean shops do not have coordinates yet. Add lat/lng
-              from each shop edit page to place them on the map.
+              {selectedCountry === "JP"
+                ? "Matching Japan shops do not have coordinates yet. Use Geocode on each shop edit page."
+                : "Matching Korean shops do not have coordinates yet. Add lat/lng from each shop edit page to place them on the map."}
             </MapState>
+          ) : selectedCountry === "JP" ? (
+            <GoogleMap
+              markers={googleMarkers}
+              className="h-[52vh] lg:h-[70vh]"
+            />
           ) : (
-            <NaverMap markers={markers} className="h-[52vh] lg:h-[70vh]" />
+            <NaverMap
+              markers={naverMarkers}
+              className="h-[52vh] lg:h-[70vh]"
+            />
           )}
         </div>
 

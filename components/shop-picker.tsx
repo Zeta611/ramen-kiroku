@@ -1,6 +1,12 @@
 "use client"
 
+import { useAction } from "convex/react"
+import * as React from "react"
+import { toast } from "sonner"
+
+import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -38,8 +44,44 @@ export function ShopPicker({
   value: ShopFormValue
   onChange: (value: ShopFormValue) => void
 }) {
+  const geocodeKoreanAddress = useAction(api.naver.geocodeAddress)
+  const geocodeJapaneseAddress = useAction(api.google.geocodeAddress)
+  const [isGeocoding, setIsGeocoding] = React.useState(false)
   const update = (patch: Partial<ShopFormValue>) =>
     onChange({ ...value, ...patch })
+
+  async function onGeocode() {
+    const address = value.addressLine?.trim()
+    if (!address) {
+      toast.error("Add an address first")
+      return
+    }
+
+    setIsGeocoding(true)
+    try {
+      const provider = value.country === "JP" ? "Google" : "Naver"
+      const result =
+        value.country === "JP"
+          ? await geocodeJapaneseAddress({ address, country: "JP" })
+          : await geocodeKoreanAddress({ address })
+      if (!result) {
+        toast.error(`${provider} returned no match for that address`)
+        return
+      }
+      update({ lat: result.lat, lng: result.lng })
+      toast.success(
+        result.matchedAddress
+          ? `Matched: ${result.matchedAddress}`
+          : `Coordinates filled from ${provider}`
+      )
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Geocoding failed"
+      toast.error(message)
+    } finally {
+      setIsGeocoding(false)
+    }
+  }
 
   return (
     <div className="grid gap-4">
@@ -138,13 +180,45 @@ export function ShopPicker({
         />
       </div>
 
-      <Field
-        label="Address"
-        value={value.addressLine ?? ""}
-        onChange={(addressLine) =>
-          update({ addressLine: addressLine || undefined })
-        }
-      />
+      <div className="grid gap-2">
+        <label className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+          Address
+        </label>
+        <div className="flex gap-2">
+          <Input
+            className="flex-1"
+            value={value.addressLine ?? ""}
+            onChange={(event) =>
+              update({ addressLine: event.target.value || undefined })
+            }
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onGeocode}
+            disabled={isGeocoding || !value.addressLine?.trim()}
+            title={
+              value.country === "KR"
+                ? "Look up lat/lng from Naver"
+                : "Look up lat/lng from Google"
+            }
+          >
+            {isGeocoding ? "Geocoding..." : "Geocode"}
+          </Button>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <NumberField
+          label="Latitude"
+          value={value.lat}
+          onChange={(lat) => update({ lat })}
+        />
+        <NumberField
+          label="Longitude"
+          value={value.lng}
+          onChange={(lng) => update({ lng })}
+        />
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
           label="Google Maps URL"
@@ -185,6 +259,38 @@ function Field({
         value={value}
         required={required}
         onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  )
+}
+
+function NumberField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: number | undefined
+  onChange: (value: number | undefined) => void
+}) {
+  return (
+    <div className="grid gap-2">
+      <label className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+        {label}
+      </label>
+      <Input
+        type="number"
+        step="any"
+        value={value ?? ""}
+        onChange={(event) => {
+          const raw = event.target.value
+          if (raw === "") {
+            onChange(undefined)
+            return
+          }
+          const parsed = Number(raw)
+          onChange(Number.isFinite(parsed) ? parsed : undefined)
+        }}
       />
     </div>
   )
