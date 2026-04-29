@@ -18,6 +18,7 @@ export type NaverMapMarker = {
 // package. We treat the global namespace as opaque and only describe the
 // surface we actually use.
 type NaverLatLng = { __naverLatLng: never }
+type NaverPoint = { __naverPoint: never }
 type NaverLatLngBounds = {
   extend: (latLng: NaverLatLng) => void
 }
@@ -36,9 +37,14 @@ type NaverNamespace = {
       position: NaverLatLng
       map: NaverMapInstance
       title?: string
+      icon?: {
+        content: string
+        anchor?: NaverPoint
+      }
     }) => NaverMarkerInstance
     LatLng: new (lat: number, lng: number) => NaverLatLng
     LatLngBounds: new () => NaverLatLngBounds
+    Point: new (x: number, y: number) => NaverPoint
     Event: {
       addListener: (
         target: NaverMarkerInstance,
@@ -56,6 +62,26 @@ declare global {
 }
 
 let sdkLoadPromise: Promise<NaverNamespace> | null = null
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+}
+
+function markerContent(name: string) {
+  const label = escapeHtml(name)
+
+  return `
+    <div style="display:flex;align-items:center;gap:6px;transform:translateY(-10px);font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;white-space:nowrap;">
+      <span style="display:block;width:14px;height:14px;border:3px solid #fff;border-radius:999px;background:#f15a24;box-shadow:0 1px 4px rgba(0,0,0,.35);"></span>
+      <span style="display:block;max-width:160px;overflow:hidden;text-overflow:ellipsis;border:1px solid rgba(0,0,0,.16);border-radius:4px;background:#fff;padding:3px 7px;color:#171717;font-size:12px;font-weight:700;line-height:1.2;box-shadow:0 1px 5px rgba(0,0,0,.24);">${label}</span>
+    </div>
+  `
+}
 
 function loadNaverSdk(): Promise<NaverNamespace> {
   if (typeof window === "undefined") {
@@ -151,6 +177,10 @@ export function NaverMap({
             position,
             map,
             title: marker.name,
+            icon: {
+              content: markerContent(marker.name),
+              anchor: new naver.maps.Point(7, 7),
+            },
           })
           bounds.extend(position)
 
