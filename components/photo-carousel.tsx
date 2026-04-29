@@ -72,6 +72,16 @@ export function PhotoCarousel({
           onClick={() => setLightboxOpen(true)}
         >
           <Image
+            key={`thumb-${selectedPhoto._id}`}
+            src={selectedPhoto.thumbUrl}
+            alt=""
+            aria-hidden
+            fill
+            sizes="(max-width: 1024px) 100vw, 1024px"
+            className="object-contain"
+          />
+          <Image
+            key={`full-${selectedPhoto._id}`}
             src={selectedPhoto.url}
             alt={`${title} photo ${activeIndex + 1}`}
             fill
@@ -154,6 +164,16 @@ export function PhotoCarousel({
           </DialogClose>
           <div className="relative grid min-h-0 place-items-center">
             <Image
+              key={`lightbox-thumb-${selectedPhoto._id}`}
+              src={selectedPhoto.thumbUrl}
+              alt=""
+              aria-hidden
+              fill
+              sizes="100vw"
+              className="object-contain"
+            />
+            <Image
+              key={`lightbox-full-${selectedPhoto._id}`}
               src={selectedPhoto.url}
               alt={`${title} photo ${activeIndex + 1}`}
               fill
