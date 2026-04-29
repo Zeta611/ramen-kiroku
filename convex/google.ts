@@ -40,7 +40,12 @@ async function geocode(address: string): Promise<GoogleGeocodeResult> {
   url.searchParams.set("key", apiKey)
   url.searchParams.set("region", "jp")
   url.searchParams.set("components", "country:JP")
-  url.searchParams.set("language", "ja")
+  // Only request Japanese responses when the input is actually Japanese.
+  // For romanized addresses, language=ja biases the parser and can return
+  // a less precise match (off by a few blocks) instead of the ROOFTOP result.
+  if (/[぀-ヿ㐀-鿿]/.test(address)) {
+    url.searchParams.set("language", "ja")
+  }
 
   const response = await fetch(url)
   if (!response.ok) {
