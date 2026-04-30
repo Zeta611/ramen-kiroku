@@ -56,7 +56,7 @@ function filterSampleWishlist(filters: PlaceFilters): MapBrowserShop[] {
 
 export default function WishlistPage() {
   const [filters, setFilters] = React.useState<PlaceFilters>({
-    country: "KR",
+    country: "JP",
     sort: "name_asc",
   })
   const showSamples = usingSampleData()
@@ -68,7 +68,7 @@ export default function WishlistPage() {
   const displayShops: MapBrowserShop[] | undefined = showSamples
     ? filterSampleWishlist(filters)
     : realShops
-  const selectedCountry = filters.country ?? "KR"
+  const selectedCountry = filters.country ?? "JP"
 
   return (
     <main className="mx-auto grid max-w-6xl gap-4 px-4 py-4">
