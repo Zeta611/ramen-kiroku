@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -46,6 +47,34 @@ type InitialVisit = {
   visit: VisitFields
   photos: ManagedPhoto[]
 }
+
+const NOODLE_FIRMNESS_OPTIONS = [
+  { value: "barikata", label: "Very firm (barikata)" },
+  { value: "katame", label: "Firm (katame)" },
+  { value: "futsuu", label: "Regular (futsuu)" },
+  { value: "yawarakame", label: "Soft (yawarakame)" },
+] as const
+
+const NOODLE_THICKNESS_OPTIONS = [
+  { value: "thin", label: "Thin" },
+  { value: "medium", label: "Medium" },
+  { value: "thick", label: "Thick" },
+  { value: "extra thick", label: "Extra thick" },
+] as const
+
+const TOPPING_OPTIONS = [
+  "ajitama",
+  "chashu",
+  "nori",
+  "menma",
+  "negi",
+  "kikurage",
+  "corn",
+  "butter",
+  "bean sprouts",
+  "garlic",
+  "spicy miso",
+] as const
 
 const defaultShop: ShopFormValue = {
   name: "",
@@ -201,11 +230,13 @@ export function VisitForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {RAMEN_STYLES.map((style) => (
-                  <SelectItem key={style} value={style}>
-                    {STYLE_LABELS[style]}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  {RAMEN_STYLES.map((style) => (
+                    <SelectItem key={style} value={style}>
+                      {STYLE_LABELS[style]}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
@@ -238,36 +269,38 @@ export function VisitForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No price</SelectItem>
-                <SelectItem value="KRW">KRW</SelectItem>
-                <SelectItem value="JPY">JPY</SelectItem>
+                <SelectGroup>
+                  <SelectItem value="none">No price</SelectItem>
+                  <SelectItem value="KRW">KRW</SelectItem>
+                  <SelectItem value="JPY">JPY</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <Field
+          <OptionalSelectField
             label="Noodle firmness"
             value={visit.noodleFirmness ?? ""}
+            options={NOODLE_FIRMNESS_OPTIONS}
+            emptyLabel="Choose firmness"
             onChange={(noodleFirmness) =>
-              updateVisitFields({ noodleFirmness: noodleFirmness || undefined })
+              updateVisitFields({ noodleFirmness })
             }
           />
-          <Field
+          <OptionalSelectField
             label="Noodle thickness"
             value={visit.noodleThickness ?? ""}
+            options={NOODLE_THICKNESS_OPTIONS}
+            emptyLabel="Choose thickness"
             onChange={(noodleThickness) =>
-              updateVisitFields({
-                noodleThickness: noodleThickness || undefined,
-              })
+              updateVisitFields({ noodleThickness })
             }
           />
-          <Field
-            label="Toppings"
+          <ToppingsField
             value={visit.toppings}
             onChange={(toppings) => updateVisitFields({ toppings })}
-            placeholder="ajitama, chashu x2"
           />
         </div>
 
@@ -308,8 +341,10 @@ export function VisitForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="yes">Would revisit</SelectItem>
-              <SelectItem value="no">Would not revisit</SelectItem>
+              <SelectGroup>
+                <SelectItem value="yes">Would revisit</SelectItem>
+                <SelectItem value="no">Would not revisit</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </div>
@@ -346,6 +381,105 @@ export function VisitForm({
       </div>
     </form>
   )
+}
+
+function OptionalSelectField({
+  label,
+  value,
+  options,
+  emptyLabel,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: readonly { value: string; label: string }[]
+  emptyLabel: string
+  onChange: (value: string | undefined) => void
+}) {
+  return (
+    <div className="grid content-start gap-2">
+      <label className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+        {label}
+      </label>
+      <Select
+        value={value || "none"}
+        onValueChange={(nextValue) =>
+          onChange(nextValue === "none" ? undefined : nextValue)
+        }
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="none">{emptyLabel}</SelectItem>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
+function ToppingsField({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  const selectedToppings = splitToppings(value)
+
+  return (
+    <div className="grid content-start gap-2">
+      <label className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+        Toppings
+      </label>
+      <div className="flex flex-wrap gap-1.5">
+        {TOPPING_OPTIONS.map((topping) => {
+          const isSelected = selectedToppings.includes(topping)
+
+          return (
+            <Button
+              key={topping}
+              type="button"
+              size="xs"
+              variant={isSelected ? "default" : "outline"}
+              aria-pressed={isSelected}
+              onClick={() => onChange(toggleTopping(value, topping))}
+            >
+              {topping}
+            </Button>
+          )
+        })}
+      </div>
+      <Input
+        value={value}
+        placeholder="custom toppings"
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  )
+}
+
+function splitToppings(value: string) {
+  return value
+    .split(",")
+    .map((topping) => topping.trim())
+    .filter(Boolean)
+}
+
+function toggleTopping(value: string, topping: string) {
+  const toppings = splitToppings(value)
+  const nextToppings = toppings.includes(topping)
+    ? toppings.filter((currentTopping) => currentTopping !== topping)
+    : [...toppings, topping]
+
+  return nextToppings.join(", ")
 }
 
 function Field({
