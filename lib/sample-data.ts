@@ -31,6 +31,10 @@ export type SampleVisit = {
   ratingToppings?: number
   wouldRevisit: boolean
   comment: string
+  commentEn?: string
+  commentEs?: string
+  commentTranslatedFrom?: string
+  commentTranslationStatus?: "pending" | "error"
   firstPhoto: SamplePhoto
   photos: SamplePhoto[]
 }

@@ -56,6 +56,14 @@ export default defineSchema({
     ratingToppings: v.optional(v.number()),
     wouldRevisit: v.boolean(),
     comment: v.string(),
+    commentEn: v.optional(v.string()),
+    commentEs: v.optional(v.string()),
+    // Exact KO snapshot that produced the current translations. Lets us cheaply
+    // detect drift in the backfill job without hashing.
+    commentTranslatedFrom: v.optional(v.string()),
+    commentTranslationStatus: v.optional(
+      v.union(v.literal("pending"), v.literal("error"))
+    ),
   })
     .index("by_visitedOn", ["visitedOn"])
     .index("by_shop", ["shopId"])

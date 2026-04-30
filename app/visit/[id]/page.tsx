@@ -6,9 +6,11 @@ import { useParams } from "next/navigation"
 
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
+import { LanguageSwitcher } from "@/components/language-switcher"
 import { PhotoCarousel } from "@/components/photo-carousel"
 import { StarRatingDisplay } from "@/components/star-rating"
 import { StyleChip } from "@/components/style-chip"
+import { TranslatedComment } from "@/components/translated-comment"
 import { VisitActions } from "@/components/visit-actions"
 import {
   getSampleVisit,
@@ -107,12 +109,18 @@ export default function VisitDetailPage() {
             </div>
           ) : null}
           <div>
-            <h2 className="mb-2 text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-              Notes
-            </h2>
-            <p className="text-sm leading-7 whitespace-pre-wrap">
-              {visit.comment || "No notes."}
-            </p>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+                Notes
+              </h2>
+              {visit.comment.trim() ? <LanguageSwitcher size="xs" /> : null}
+            </div>
+            <TranslatedComment
+              ko={visit.comment}
+              en={visit.commentEn}
+              es={visit.commentEs}
+              status={visit.commentTranslationStatus}
+            />
           </div>
         </div>
       </section>

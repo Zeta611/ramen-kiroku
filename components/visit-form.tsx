@@ -285,9 +285,7 @@ export function VisitForm({
             value={visit.noodleFirmness ?? ""}
             options={NOODLE_FIRMNESS_OPTIONS}
             emptyLabel="Choose firmness"
-            onChange={(noodleFirmness) =>
-              updateVisitFields({ noodleFirmness })
-            }
+            onChange={(noodleFirmness) => updateVisitFields({ noodleFirmness })}
           />
           <OptionalSelectField
             label="Noodle thickness"

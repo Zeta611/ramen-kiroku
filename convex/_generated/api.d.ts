@@ -13,6 +13,7 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as naver from "../naver.js";
 import type * as photos from "../photos.js";
 import type * as shops from "../shops.js";
+import type * as translate from "../translate.js";
 import type * as visits from "../visits.js";
 
 import type {
@@ -27,6 +28,7 @@ declare const fullApi: ApiFromModules<{
   naver: typeof naver;
   photos: typeof photos;
   shops: typeof shops;
+  translate: typeof translate;
   visits: typeof visits;
 }>;
 

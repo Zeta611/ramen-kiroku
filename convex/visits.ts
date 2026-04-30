@@ -1,6 +1,13 @@
 import { v } from "convex/values"
 
-import { mutation, query, type MutationCtx } from "./_generated/server"
+import { internal } from "./_generated/api"
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  type MutationCtx,
+} from "./_generated/server"
 import type { Doc, Id } from "./_generated/dataModel"
 import { requireOwner } from "./lib/auth"
 
@@ -301,6 +308,9 @@ export const createWithPhotos = mutation({
       city: shop.city,
       area: shop.area,
       ...args.visit,
+      commentTranslationStatus: args.visit.comment.trim()
+        ? "pending"
+        : undefined,
     })
 
     await Promise.all(
@@ -311,6 +321,14 @@ export const createWithPhotos = mutation({
         })
       )
     )
+
+    if (args.visit.comment.trim()) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.translate.translateVisitComment,
+        { id: visitId }
+      )
+    }
 
     return visitId
   },
@@ -330,7 +348,23 @@ export const update = mutation({
     assertRating(args.visit.ratingNoodles, "Noodles rating")
     assertRating(args.visit.ratingToppings, "Toppings rating")
 
+    const existing = await ctx.db.get(args.id)
+    if (!existing) throw new Error("Visit not found")
+
     const shop = await findOrCreateShop(ctx, args.shop)
+
+    const newComment = args.visit.comment
+    const commentChanged = existing.comment !== newComment
+    const translationsAreFresh = existing.commentTranslatedFrom === newComment
+
+    const translationPatch: Partial<Doc<"visits">> = commentChanged
+      ? {
+          commentEn: undefined,
+          commentEs: undefined,
+          commentTranslatedFrom: undefined,
+          commentTranslationStatus: newComment.trim() ? "pending" : undefined,
+        }
+      : {}
 
     await ctx.db.patch(args.id, {
       shopId: shop._id,
@@ -340,7 +374,21 @@ export const update = mutation({
       city: shop.city,
       area: shop.area,
       ...args.visit,
+      ...translationPatch,
     })
+
+    // Re-translate when the source changed, or when the previous attempt
+    // never landed (e.g. an earlier transient error) — but only if there is
+    // a non-empty comment to translate.
+    const needsTranslation =
+      newComment.trim().length > 0 && (commentChanged || !translationsAreFresh)
+    if (needsTranslation) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.translate.translateVisitComment,
+        { id: args.id }
+      )
+    }
   },
 })
 
@@ -358,5 +406,61 @@ export const remove = mutation({
     await ctx.db.delete(args.id)
 
     return photos.flatMap((photo) => [photo.key, photo.thumbKey])
+  },
+})
+
+// --- Translation helpers (called from convex/translate.ts) ---
+
+export const getForTranslation = internalQuery({
+  args: { id: v.id("visits") },
+  handler: async (ctx, args) => {
+    const visit = await ctx.db.get(args.id)
+    if (!visit) return null
+    return { comment: visit.comment }
+  },
+})
+
+export const listMissingCommentTranslations = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const visits = await ctx.db.query("visits").collect()
+    return visits
+      .filter(
+        (visit) =>
+          visit.comment.trim().length > 0 &&
+          visit.commentTranslatedFrom !== visit.comment
+      )
+      .map((visit) => ({ _id: visit._id, comment: visit.comment }))
+  },
+})
+
+export const setCommentTranslations = internalMutation({
+  args: {
+    id: v.id("visits"),
+    source: v.string(),
+    en: v.string(),
+    es: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const visit = await ctx.db.get(args.id)
+    if (!visit) return
+    // Guard against a race where the comment was edited again while the
+    // translation was in flight: only persist if the source we translated
+    // still matches the current comment.
+    if (visit.comment !== args.source) return
+
+    await ctx.db.patch(args.id, {
+      commentEn: args.en,
+      commentEs: args.es,
+      commentTranslatedFrom: args.source,
+      commentTranslationStatus: undefined,
+    })
+  },
+})
+
+export const markCommentTranslationError = internalMutation({
+  args: { id: v.id("visits") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { commentTranslationStatus: "error" })
   },
 })
