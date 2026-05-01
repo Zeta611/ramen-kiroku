@@ -12,6 +12,7 @@ import { StarRatingDisplay } from "@/components/star-rating"
 import { StyleChip } from "@/components/style-chip"
 import { TranslatedComment } from "@/components/translated-comment"
 import { VisitActions } from "@/components/visit-actions"
+import { noodleFirmnessLabel, noodleThicknessLabel } from "@/lib/ramen"
 import {
   getSampleVisit,
   SAMPLE_SHOPS,
@@ -50,6 +51,11 @@ export default function VisitDetailPage() {
   }
 
   const { visit, shop, photos } = data
+
+  const noodleParts = [
+    visit.noodleThickness ? noodleThicknessLabel(visit.noodleThickness) : null,
+    visit.noodleFirmness ? noodleFirmnessLabel(visit.noodleFirmness) : null,
+  ].filter((part): part is string => Boolean(part))
 
   return (
     <main className="mx-auto grid max-w-5xl gap-6 px-4 py-6">
@@ -100,6 +106,14 @@ export default function VisitDetailPage() {
           ) : null}
         </div>
         <div className="grid gap-4">
+          {noodleParts.length > 0 ? (
+            <div>
+              <h2 className="mb-2 text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+                Noodles
+              </h2>
+              <p className="text-sm">{noodleParts.join(" · ")}</p>
+            </div>
+          ) : null}
           {visit.toppings.length > 0 ? (
             <div>
               <h2 className="mb-2 text-xs font-semibold tracking-widest text-muted-foreground uppercase">

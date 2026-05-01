@@ -49,6 +49,38 @@ export const STYLE_CHIP_CLASSES: Record<RamenStyle, string> = {
   other: "border-muted-foreground/30 bg-muted text-muted-foreground",
 }
 
+export const NOODLE_FIRMNESS_OPTIONS = [
+  { value: "barikata", label: "Very firm (barikata)" },
+  { value: "katame", label: "Firm (katame)" },
+  { value: "futsuu", label: "Regular (futsuu)" },
+  { value: "yawarakame", label: "Soft (yawarakame)" },
+] as const
+
+export const NOODLE_THICKNESS_OPTIONS = [
+  { value: "thin", label: "Thin" },
+  { value: "medium", label: "Medium" },
+  { value: "thick", label: "Thick" },
+  { value: "extra thick", label: "Extra thick" },
+] as const
+
+const NOODLE_FIRMNESS_LABELS = new Map<string, string>(
+  NOODLE_FIRMNESS_OPTIONS.map((option) => [option.value, option.label])
+)
+
+const NOODLE_THICKNESS_LABELS = new Map<string, string>(
+  NOODLE_THICKNESS_OPTIONS.map((option) => [option.value, option.label])
+)
+
+// Resolves a stored noodle value (e.g. "katame", "thin") to its display label.
+// Falls back to the raw value so legacy/custom strings still render sensibly.
+export function noodleFirmnessLabel(value: string) {
+  return NOODLE_FIRMNESS_LABELS.get(value) ?? value
+}
+
+export function noodleThicknessLabel(value: string) {
+  return NOODLE_THICKNESS_LABELS.get(value) ?? value
+}
+
 export const COUNTRIES = [
   { value: "KR", label: "Korea" },
   { value: "JP", label: "Japan" },

@@ -22,7 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { RAMEN_STYLES, STYLE_LABELS, type RamenStyle } from "@/lib/ramen"
+import {
+  NOODLE_FIRMNESS_OPTIONS,
+  NOODLE_THICKNESS_OPTIONS,
+  RAMEN_STYLES,
+  STYLE_LABELS,
+  type RamenStyle,
+} from "@/lib/ramen"
 
 type VisitFields = {
   visitedOn: string
@@ -47,20 +53,6 @@ type InitialVisit = {
   visit: VisitFields
   photos: ManagedPhoto[]
 }
-
-const NOODLE_FIRMNESS_OPTIONS = [
-  { value: "barikata", label: "Very firm (barikata)" },
-  { value: "katame", label: "Firm (katame)" },
-  { value: "futsuu", label: "Regular (futsuu)" },
-  { value: "yawarakame", label: "Soft (yawarakame)" },
-] as const
-
-const NOODLE_THICKNESS_OPTIONS = [
-  { value: "thin", label: "Thin" },
-  { value: "medium", label: "Medium" },
-  { value: "thick", label: "Thick" },
-  { value: "extra thick", label: "Extra thick" },
-] as const
 
 const TOPPING_OPTIONS = [
   "ajitama",
