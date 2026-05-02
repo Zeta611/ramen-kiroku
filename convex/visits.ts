@@ -18,6 +18,7 @@ const ramenStyle = v.union(
   v.literal("shoyu"),
   v.literal("miso"),
   v.literal("shio"),
+  v.literal("niboshi"),
   v.literal("tsukemen"),
   v.literal("mazesoba"),
   v.literal("abura_soba"),

@@ -3,6 +3,7 @@ export const RAMEN_STYLES = [
   "shoyu",
   "miso",
   "shio",
+  "niboshi",
   "tsukemen",
   "mazesoba",
   "abura_soba",
@@ -19,6 +20,7 @@ export const STYLE_LABELS: Record<RamenStyle, string> = {
   shoyu: "Shoyu",
   miso: "Miso",
   shio: "Shio",
+  niboshi: "Niboshi",
   tsukemen: "Tsukemen",
   mazesoba: "Mazesoba",
   abura_soba: "Abura-soba",
@@ -35,6 +37,8 @@ export const STYLE_CHIP_CLASSES: Record<RamenStyle, string> = {
     "border-orange-600/30 bg-orange-600/10 text-orange-800 dark:text-orange-300",
   miso: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
   shio: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  niboshi:
+    "border-cyan-600/30 bg-cyan-600/10 text-cyan-800 dark:text-cyan-300",
   tsukemen:
     "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300",
   mazesoba:
