@@ -16,7 +16,9 @@ Rules:
 - Preserve line breaks exactly as written.
 - Keep proper nouns (shop names, dish names, neighborhoods) untranslated with their transcriptions in parentheses, unless there's an obvious English/Spanish equivalent.
 - Keep the meaning faithful; do not add commentary, disclaimers, or quotation marks.
-- Respond with a single JSON object: { "en": "...", "es": "..." }. No surrounding text.`
+- Respond with a single JSON object: { "en": "...", "es": "..." }. No surrounding text.
+- Output STRICT JSON only. Do NOT use JavaScript escape sequences. In particular, the apostrophe character (') and forward slash (/) must NOT be escaped — write them literally. The only valid string escapes are \\", \\\\, \\n, \\r, \\t, and \\uXXXX.
+- CRITICAL: Inside JSON string values, encode every line break as the two literal characters \\n (backslash + lowercase n). Do NOT put raw newline characters inside the "..." values; that would make the JSON unparseable.`
 
 type OpenRouterChatResponse = {
   choices?: Array<{
@@ -41,6 +43,28 @@ function stripCodeFence(content: string): string {
     trimmed
   )
   return fenceMatch ? fenceMatch[1].trim() : trimmed
+}
+
+/**
+ * Claude sometimes emits JavaScript-style escape sequences inside JSON string
+ * values that JSON.parse rejects (the JSON spec only permits \", \\, \/, \b,
+ * \f, \n, \r, \t, and \uXXXX). Most commonly this is `\'` for an apostrophe.
+ * Repair the few offenders we have seen so otherwise-valid 8 KB responses
+ * don't fail on a single character.
+ *
+ * We only touch sequences that are unambiguously invalid in JSON, so we won't
+ * corrupt legitimate content.
+ */
+function repairInvalidJsonEscapes(content: string): string {
+  return (
+    content
+      // \' → ' (apostrophe never needs escaping in JSON)
+      .replace(/\\'/g, "'")
+      // Stray bare backslashes before a regular ASCII letter that isn't a
+      // legal JSON escape character. Leaves \", \\, \/, \b, \f, \n, \r, \t,
+      // \u alone.
+      .replace(/\\([^"\\/bfnrtu])/g, "$1")
+  )
 }
 
 async function translateCommentRaw(
@@ -95,12 +119,14 @@ async function translateCommentRaw(
     throw new Error("OpenRouter returned no content")
   }
 
+  const repaired = repairInvalidJsonEscapes(stripCodeFence(content))
   let parsed: unknown
   try {
-    parsed = JSON.parse(stripCodeFence(content))
+    parsed = JSON.parse(repaired)
   } catch {
     throw new Error(
-      `OpenRouter returned non-JSON content. First 200 chars: ${content.slice(0, 200)}`
+      `OpenRouter returned non-JSON content (length=${content.length}). ` +
+        `Content: ${repaired}`
     )
   }
 
