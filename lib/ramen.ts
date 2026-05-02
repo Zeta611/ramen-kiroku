@@ -32,26 +32,26 @@ export const STYLE_LABELS: Record<RamenStyle, string> = {
 
 export const STYLE_CHIP_CLASSES: Record<RamenStyle, string> = {
   tonkotsu:
-    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    "border-stone-500/30 bg-stone-500/10 text-stone-700 dark:text-stone-300",
   shoyu:
-    "border-orange-600/30 bg-orange-600/10 text-orange-800 dark:text-orange-300",
+    "border-amber-800/30 bg-amber-800/10 text-amber-900 dark:text-amber-200",
   miso: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
   shio: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
   niboshi:
-    "border-cyan-600/30 bg-cyan-600/10 text-cyan-800 dark:text-cyan-300",
+    "border-green-700/30 bg-green-700/10 text-green-900 dark:text-green-300",
   tsukemen:
     "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300",
   mazesoba:
-    "border-lime-600/30 bg-lime-600/10 text-lime-800 dark:text-lime-300",
+    "border-teal-600/30 bg-teal-600/10 text-teal-800 dark:text-teal-300",
   abura_soba:
     "border-yellow-600/30 bg-yellow-600/10 text-yellow-800 dark:text-yellow-300",
   tantanmen:
     "border-rose-600/30 bg-rose-600/10 text-rose-800 dark:text-rose-300",
   iekei:
-    "border-emerald-600/30 bg-emerald-600/10 text-emerald-800 dark:text-emerald-300",
+    "border-orange-600/30 bg-orange-600/10 text-orange-800 dark:text-orange-300",
   jiro: "border-fuchsia-600/30 bg-fuchsia-600/10 text-fuchsia-800 dark:text-fuchsia-300",
   other: "border-muted-foreground/30 bg-muted text-muted-foreground",
-}
+};
 
 export const NOODLE_FIRMNESS_OPTIONS = [
   { value: "barikata", label: "Very firm (barikata)" },
