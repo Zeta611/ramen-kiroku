@@ -10,9 +10,8 @@ export function useIsOwner() {
   return (
     isLoaded &&
     ownerEmail != null &&
-    user?.emailAddresses.some(
-      (email) => email.emailAddress === ownerEmail
-    ) === true
+    user?.emailAddresses.some((email) => email.emailAddress === ownerEmail) ===
+      true
   )
 }
 

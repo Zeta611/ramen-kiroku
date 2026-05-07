@@ -51,7 +51,7 @@ export const STYLE_CHIP_CLASSES: Record<RamenStyle, string> = {
     "border-orange-600/30 bg-orange-600/10 text-orange-800 dark:text-orange-300",
   jiro: "border-fuchsia-600/30 bg-fuchsia-600/10 text-fuchsia-800 dark:text-fuchsia-300",
   other: "border-muted-foreground/30 bg-muted text-muted-foreground",
-};
+}
 
 export const NOODLE_FIRMNESS_OPTIONS = [
   { value: "barikata", label: "Very firm (barikata)" },
