@@ -3,13 +3,22 @@
 import { useUser } from "@clerk/nextjs"
 import type * as React from "react"
 
-export function OwnerOnly({ children }: { children: React.ReactNode }) {
+export function useIsOwner() {
   const { isLoaded, user } = useUser()
+  const ownerEmail = process.env.NEXT_PUBLIC_OWNER_EMAIL
 
-  if (!isLoaded) return null
+  return (
+    isLoaded &&
+    ownerEmail != null &&
+    user?.emailAddresses.some(
+      (email) => email.emailAddress === ownerEmail
+    ) === true
+  )
+}
 
-  const email = user?.primaryEmailAddress?.emailAddress
-  if (email !== process.env.NEXT_PUBLIC_OWNER_EMAIL) return null
+export function OwnerOnly({ children }: { children: React.ReactNode }) {
+  const isOwner = useIsOwner()
+  if (!isOwner) return null
 
   return <>{children}</>
 }

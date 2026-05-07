@@ -155,7 +155,7 @@ export function ShopMapBrowser({
           )}
         </div>
 
-        <div className="grid gap-3">
+        <div className="grid gap-3 lg:h-[70vh] lg:grid-rows-[auto_minmax(0,1fr)]">
           <div>
             <h2 className="font-heading text-2xl">{listTitle}</h2>
             <p className="text-sm text-muted-foreground">
@@ -176,7 +176,7 @@ export function ShopMapBrowser({
               {emptyLabel}
             </div>
           ) : (
-            <div className="grid max-h-none gap-3 overflow-y-visible lg:max-h-[70vh] lg:overflow-y-auto lg:pr-1">
+            <div className="flex max-h-none flex-col gap-3 overflow-y-visible lg:min-h-0 lg:overflow-y-auto lg:pr-1">
               {shops.map((shop) => (
                 <ShopCard key={shop._id} shop={shop} action={action?.(shop)} />
               ))}

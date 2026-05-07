@@ -16,8 +16,11 @@ type ShopCardProps = {
 
 export function ShopCard({ shop, action }: ShopCardProps) {
   return (
-    <div className="overflow-hidden border bg-card">
-      <Link href={`/shops/${shop._id}`} className="grid grid-cols-[96px_1fr]">
+    <div className="shrink-0 overflow-hidden border bg-card">
+      <Link
+        href={`/shops/${shop._id}`}
+        className="grid min-h-24 grid-cols-[96px_minmax(0,1fr)]"
+      >
         <div className="relative aspect-square bg-muted">
           {shop.latestPhoto ? (
             <Image

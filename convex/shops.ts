@@ -216,6 +216,7 @@ async function summarizeBrowseShop(
   const visitFiltersActive = hasVisitFilters(args)
   const relevantVisits = visitFiltersActive ? filteredVisits : visits
 
+  if (relevantVisits.length === 0 && shop.wishlisted !== true) return null
   if (visitFiltersActive && relevantVisits.length === 0) return null
 
   relevantVisits.sort((a, b) => b.visitedOn.localeCompare(a.visitedOn))
@@ -488,7 +489,70 @@ export const removeFromWishlist = mutation({
   args: { id: v.id("shops") },
   handler: async (ctx, args) => {
     await requireOwner(ctx)
+
+    const shop = await ctx.db.get(args.id)
+    if (!shop) throw new Error("Shop not found")
+
+    const visits = await ctx.db
+      .query("visits")
+      .withIndex("by_shop", (q) => q.eq("shopId", args.id))
+      .take(1)
+
+    if (visits.length === 0) {
+      await ctx.db.delete(args.id)
+      return { deleted: true }
+    }
+
     await ctx.db.patch(args.id, { wishlisted: false })
+    return { deleted: false }
+  },
+})
+
+export const deleteUnreferencedShops = mutation({
+  args: {
+    dryRun: v.optional(v.boolean()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx)
+
+    const dryRun = args.dryRun ?? true
+    const limit = Math.max(1, Math.min(args.limit ?? 50, 100))
+    const shopsToDelete: Doc<"shops">[] = []
+    let scanned = 0
+
+    for await (const shop of ctx.db.query("shops")) {
+      scanned += 1
+      if (shop.wishlisted === true) continue
+
+      const visits = await ctx.db
+        .query("visits")
+        .withIndex("by_shop", (q) => q.eq("shopId", shop._id))
+        .take(1)
+
+      if (visits.length > 0) continue
+
+      shopsToDelete.push(shop)
+      if (shopsToDelete.length >= limit) break
+    }
+
+    if (!dryRun) {
+      await Promise.all(shopsToDelete.map((shop) => ctx.db.delete(shop._id)))
+    }
+
+    return {
+      dryRun,
+      scanned,
+      matched: shopsToDelete.length,
+      deleted: dryRun ? 0 : shopsToDelete.length,
+      shops: shopsToDelete.map((shop) => ({
+        _id: shop._id,
+        name: shop.name,
+        country: shop.country,
+        city: shop.city,
+        area: shop.area,
+      })),
+    }
   },
 })
 

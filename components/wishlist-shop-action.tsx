@@ -5,7 +5,6 @@ import { useMutation } from "convex/react"
 import * as React from "react"
 import { toast } from "sonner"
 
-import { OwnerOnly } from "@/components/owner-only"
 import { Button } from "@/components/ui/button"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
@@ -29,17 +28,15 @@ export function WishlistShopAction({ shopId }: { shopId: string }) {
   }
 
   return (
-    <OwnerOnly>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={onRemove}
-        disabled={isRemoving}
-      >
-        <RiCloseLine data-icon="inline-start" />
-        {isRemoving ? "Removing" : "Remove"}
-      </Button>
-    </OwnerOnly>
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={onRemove}
+      disabled={isRemoving}
+    >
+      <RiCloseLine data-icon="inline-start" />
+      {isRemoving ? "Removing" : "Remove"}
+    </Button>
   )
 }

@@ -5,7 +5,7 @@ import { useQuery } from "convex/react"
 import Link from "next/link"
 import * as React from "react"
 
-import { OwnerOnly } from "@/components/owner-only"
+import { OwnerOnly, useIsOwner } from "@/components/owner-only"
 import { PlaceFilterBar } from "@/components/place-filter-bar"
 import {
   ShopMapBrowser,
@@ -69,6 +69,7 @@ export default function WishlistPage() {
     ? filterSampleWishlist(filters)
     : realShops
   const selectedCountry = filters.country ?? "JP"
+  const isOwner = useIsOwner()
 
   return (
     <main className="mx-auto grid max-w-6xl gap-4 px-4 py-4">
@@ -115,7 +116,9 @@ export default function WishlistPage() {
           </OwnerOnly>
         }
         action={(shop) =>
-          showSamples ? null : <WishlistShopAction shopId={shop._id} />
+          showSamples || !isOwner ? null : (
+            <WishlistShopAction shopId={shop._id} />
+          )
         }
       />
     </main>
