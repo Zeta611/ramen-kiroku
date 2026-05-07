@@ -27,7 +27,7 @@ export default clerkMiddleware(async (auth, req) => {
   const user = await client.users.getUser(session.userId)
   const email = user.primaryEmailAddress?.emailAddress
   if (email !== process.env.OWNER_EMAIL) {
-    return new Response("Forbidden", { status: 403 })
+    return new Response("Forbidden (Clerk)", { status: 403 })
   }
 })
 
