@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sheet"
 import {
   COUNTRIES,
+  COUNTRY_BAR_OPTIONS,
   PLACE_SORT_OPTIONS,
   type CountryCode,
   type PlaceFilters,
@@ -155,37 +156,71 @@ export function PlaceFilterBar({
           </p>
           <p className="truncate text-sm">Filter by place</p>
         </div>
-        <div className="hidden min-w-[220px] sm:block">
-          <Select
-            value={filters.sort}
-            onValueChange={(value) => set({ sort: value as PlaceSort })}
+        <div className="flex items-center gap-1.5">
+          <div
+            className="flex items-center gap-0.5"
+            role="group"
+            aria-label="Filter by country"
           >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PLACE_SORT_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            {COUNTRY_BAR_OPTIONS.map((option) => {
+              const isSelected = filters.country === option.value
+              return (
+                <Button
+                  key={option.value}
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  className={
+                    isSelected ? "bg-muted text-foreground" : undefined
+                  }
+                  aria-pressed={isSelected}
+                  title={option.ariaLabel}
+                  aria-label={option.ariaLabel}
+                  onClick={() =>
+                    set({
+                      country: isSelected ? undefined : option.value,
+                    })
+                  }
+                >
+                  <span className="text-base leading-none" aria-hidden>
+                    {option.flag}
+                  </span>
+                </Button>
+              )
+            })}
+          </div>
+          <div className="hidden min-w-[220px] sm:block">
+            <Select
+              value={filters.sort}
+              onValueChange={(value) => set({ sort: value as PlaceSort })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PLACE_SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button type="button" variant="outline">
+                <RiFilter3Line data-icon="inline-start" />
+                Filters
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Filters</SheetTitle>
+              </SheetHeader>
+              <div className="px-4 pb-6">{controls}</div>
+            </SheetContent>
+          </Sheet>
         </div>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button type="button" variant="outline">
-              <RiFilter3Line data-icon="inline-start" />
-              Filters
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>Filters</SheetTitle>
-            </SheetHeader>
-            <div className="px-4 pb-6">{controls}</div>
-          </SheetContent>
-        </Sheet>
       </div>
     </div>
   )

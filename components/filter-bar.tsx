@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sheet"
 import {
   COUNTRIES,
+  COUNTRY_BAR_OPTIONS,
   RAMEN_STYLES,
   SORT_OPTIONS,
   STYLE_LABELS,
@@ -73,13 +74,13 @@ export function FilterBar({
             <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
               Browse
             </p>
-            <p className="truncate text-sm">
+            <p className="hidden truncate text-sm sm:block">
               Filter by style, place, date, rating
             </p>
           </div>
           <Button type="button" variant="outline" disabled>
             <RiFilter3Line />
-            Filters
+            <span className="hidden sm:block">Filters</span>
           </Button>
         </div>
       </div>
@@ -282,11 +283,43 @@ export function FilterBar({
           <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
             Browse
           </p>
-          <p className="truncate text-sm">
+          <p className="hidden truncate text-sm sm:block">
             Filter by style, place, date, rating
           </p>
         </div>
-        <div className="hidden min-w-[220px] sm:block">
+        <div className="flex items-center gap-4">
+          <div
+            className="flex items-center gap-0.5"
+            role="group"
+            aria-label="Filter by country"
+          >
+            {COUNTRY_BAR_OPTIONS.map((option) => {
+              const isSelected = filters.country === option.value
+              return (
+                <Button
+                  key={option.value}
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  className={
+                    isSelected ? "bg-muted text-foreground" : undefined
+                  }
+                  aria-pressed={isSelected}
+                  title={option.ariaLabel}
+                  aria-label={option.ariaLabel}
+                  onClick={() =>
+                    set({
+                      country: isSelected ? undefined : option.value,
+                    })
+                  }
+                >
+                  <span className="text-base leading-none" aria-hidden>
+                    {option.flag}
+                  </span>
+                </Button>
+              )
+            })}
+          </div>
           <Select
             value={filters.sort}
             onValueChange={(value) => set({ sort: value as VisitSort })}
@@ -302,21 +335,21 @@ export function FilterBar({
               ))}
             </SelectContent>
           </Select>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button type="button" variant="outline">
+                <RiFilter3Line />
+                <span className="hidden sm:block">Filters</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Filters</SheetTitle>
+              </SheetHeader>
+              <div className="px-4 pb-6">{controls}</div>
+            </SheetContent>
+          </Sheet>
         </div>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button type="button" variant="outline">
-              <RiFilter3Line />
-              Filters
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>Filters</SheetTitle>
-            </SheetHeader>
-            <div className="px-4 pb-6">{controls}</div>
-          </SheetContent>
-        </Sheet>
       </div>
     </div>
   )

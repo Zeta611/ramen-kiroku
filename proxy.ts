@@ -3,7 +3,11 @@ import {
   clerkMiddleware,
   createRouteMatcher,
 } from "@clerk/nextjs/server"
-import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server"
+import {
+  type NextFetchEvent,
+  type NextRequest,
+  NextResponse,
+} from "next/server"
 
 const SOURCE_HOST = "ramen.jaylee.xyz"
 const CANONICAL_HOST = "ramen-kiroku.jaylee.xyz"
