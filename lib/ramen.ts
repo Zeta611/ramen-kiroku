@@ -92,6 +92,23 @@ export const COUNTRIES = [
 
 export type CountryCode = (typeof COUNTRIES)[number]["value"]
 
+export const COUNTRY_BAR_OPTIONS = [
+  {
+    value: "KR",
+    label: "South Korea",
+    flag: "🇰🇷",
+    ariaLabel: "Filter to South Korea",
+  },
+  {
+    value: "JP",
+    label: "Japan",
+    flag: "🇯🇵",
+    ariaLabel: "Filter to Japan",
+  },
+] as const
+
+export type CountryBarOption = (typeof COUNTRY_BAR_OPTIONS)[number]
+
 export const SORT_OPTIONS = [
   { value: "visitedOn_desc", label: "Newest visits" },
   { value: "visitedOn_asc", label: "Oldest visits" },
