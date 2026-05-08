@@ -1,20 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async redirects() {
-    return [
-      {
-        source: "/:path*",
-        has: [
-          {
-            type: "host",
-            value: "ramen.jaylee.xyz",
-          },
-        ],
-        destination: "https://ramen-kiroku.jaylee.xyz/:path*",
-        permanent: true,
-      },
-    ]
-  },
   images: {
     remotePatterns: [
       {
