@@ -1,5 +1,6 @@
 import { ClerkProvider } from "@clerk/nextjs"
 import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Geist_Mono, Noto_Sans, Playfair_Display } from "next/font/google"
 import type { Viewport } from "next"
 import { cookies, headers } from "next/headers"
@@ -76,6 +77,7 @@ export default async function RootLayout({
               </LocaleProvider>
             </ConvexClientProvider>
           </ThemeProvider>
+          <SpeedInsights />
         </body>
       </html>
     </ClerkProvider>
