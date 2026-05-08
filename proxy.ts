@@ -3,6 +3,10 @@ import {
   clerkMiddleware,
   createRouteMatcher,
 } from "@clerk/nextjs/server"
+import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server"
+
+const SOURCE_HOST = "ramen.jaylee.xyz"
+const CANONICAL_HOST = "ramen-kiroku.jaylee.xyz"
 
 const isOwnerOnlyRoute = createRouteMatcher([
   "/new(.*)",
@@ -10,7 +14,7 @@ const isOwnerOnlyRoute = createRouteMatcher([
   "/visit/(.*)/edit(.*)",
 ])
 
-export default clerkMiddleware(async (auth, req) => {
+const clerkHandler = clerkMiddleware(async (auth, req) => {
   if (!isOwnerOnlyRoute(req)) return
 
   const session = await auth()
@@ -30,6 +34,18 @@ export default clerkMiddleware(async (auth, req) => {
     return new Response("Forbidden (Clerk)", { status: 403 })
   }
 })
+
+export default function proxy(req: NextRequest, event: NextFetchEvent) {
+  const host = req.headers.get("x-forwarded-host") ?? req.nextUrl.host
+  // Forward requests to `ramen.jaylee.xyz` to `ramen-kiroku.jaylee.xyz`
+  if (host === SOURCE_HOST) {
+    const canonicalUrl = req.nextUrl.clone()
+    canonicalUrl.host = CANONICAL_HOST
+    return NextResponse.redirect(canonicalUrl, 308)
+  }
+
+  return clerkHandler(req, event)
+}
 
 export const config = {
   matcher: [
