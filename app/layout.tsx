@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin"
 import { Geist_Mono, Noto_Sans, Playfair_Display } from "next/font/google"
@@ -76,6 +77,7 @@ export default async function RootLayout({
               </LocaleProvider>
             </ConvexClientProvider>
           </ThemeProvider>
+          <Analytics />
         </body>
       </html>
     </ClerkProvider>
