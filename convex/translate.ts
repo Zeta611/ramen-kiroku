@@ -1,3 +1,4 @@
+import { jsonrepair } from "jsonrepair"
 import { v } from "convex/values"
 
 import { internal } from "./_generated/api"
@@ -9,12 +10,14 @@ const DEFAULT_MODEL = "anthropic/claude-haiku-4-5"
 
 const SYSTEM_PROMPT = `You are a translator for a personal Korean ramen blog.
 You translate the author's casual Korean notes about ramen meals into:
-- "en": natural conversational American English (keep the tone of the original text)
-- "es": natural conversational Mexican Spanish (México, keep the tone of the original text; do NOT use "vosotros")
+- "en": relaxed, natural conversational American English (keep the tone of the original text)
+- "es": relaxed, natural Mexican/Latin American Spanish (keep the tone of the original text; do NOT use "vosotros")
 
 Rules:
 - Preserve line breaks exactly as written.
 - Keep proper nouns (shop names, dish names, neighborhoods) untranslated with their transcriptions in parentheses, unless there's an obvious English/Spanish equivalent.
+- For "es", write like a casual first-person food blog, not formal review prose. Avoid stiff, academic, or Spain-leaning vocabulary. Prefer everyday Mexican/Latin American choices such as "carro" over "coche", "manejar" over "conducir", "estacionamiento" over "aparcamiento", and "mesero/a" over "camarero/a" when those ideas appear.
+- For "es", keep technical ramen terms natural and readable. It is okay to keep terms like shoyu, shio, chashu, ajitamago, menma, tsukedare, and wari untranslated when a Spanish translation would sound forced.
 - Keep the meaning faithful; do not add commentary, disclaimers, or quotation marks.
 - Respond with a single JSON object: { "en": "...", "es": "..." }. No surrounding text.
 - Output STRICT JSON only. Do NOT use JavaScript escape sequences. In particular, the apostrophe character (') and forward slash (/) must NOT be escaped — write them literally. The only valid string escapes are \\", \\\\, \\n, \\r, \\t, and \\uXXXX.
@@ -27,44 +30,6 @@ type OpenRouterChatResponse = {
     }
   }>
   error?: { message?: string; code?: number | string }
-}
-
-/**
- * Some OpenRouter providers (notably Anthropic Claude) wrap JSON responses in
- * ```json ... ``` fences even when `response_format: { type: "json_object" }`
- * is requested. Strip an optional leading/trailing fence so JSON.parse can
- * handle the payload either way.
- */
-function stripCodeFence(content: string): string {
-  const trimmed = content.trim()
-  // Match ``` or ```json (or ```JSON, etc.) on the opening fence, and a
-  // closing ``` on its own at the end. Only strip when both sides match.
-  const fenceMatch = /^```(?:[a-zA-Z0-9_-]+)?\s*\n([\s\S]*?)\n?```\s*$/.exec(
-    trimmed
-  )
-  return fenceMatch ? fenceMatch[1].trim() : trimmed
-}
-
-/**
- * Claude sometimes emits JavaScript-style escape sequences inside JSON string
- * values that JSON.parse rejects (the JSON spec only permits \", \\, \/, \b,
- * \f, \n, \r, \t, and \uXXXX). Most commonly this is `\'` for an apostrophe.
- * Repair the few offenders we have seen so otherwise-valid 8 KB responses
- * don't fail on a single character.
- *
- * We only touch sequences that are unambiguously invalid in JSON, so we won't
- * corrupt legitimate content.
- */
-function repairInvalidJsonEscapes(content: string): string {
-  return (
-    content
-      // \' → ' (apostrophe never needs escaping in JSON)
-      .replace(/\\'/g, "'")
-      // Stray bare backslashes before a regular ASCII letter that isn't a
-      // legal JSON escape character. Leaves \", \\, \/, \b, \f, \n, \r, \t,
-      // \u alone.
-      .replace(/\\([^"\\/bfnrtu])/g, "$1")
-  )
 }
 
 async function translateCommentRaw(
@@ -119,15 +84,24 @@ async function translateCommentRaw(
     throw new Error("OpenRouter returned no content")
   }
 
-  const repaired = repairInvalidJsonEscapes(stripCodeFence(content))
   let parsed: unknown
   try {
-    parsed = JSON.parse(repaired)
-  } catch {
-    throw new Error(
-      `OpenRouter returned non-JSON content (length=${content.length}). ` +
-        `Content: ${repaired}`
-    )
+    parsed = JSON.parse(content)
+  } catch (strictError) {
+    try {
+      parsed = JSON.parse(jsonrepair(content))
+    } catch (repairError) {
+      const cause =
+        repairError instanceof Error
+          ? repairError.message
+          : strictError instanceof Error
+            ? strictError.message
+            : "unknown parse error"
+      throw new Error(
+        `OpenRouter returned non-JSON content (length=${content.length}). ` +
+          `Repair failed: ${cause}. Content: ${content}`
+      )
+    }
   }
 
   if (
@@ -194,11 +168,11 @@ type BackfillSummary = {
 }
 
 export const backfillCommentTranslations = internalAction({
-  args: {},
-  handler: async (ctx): Promise<BackfillSummary> => {
+  args: { force: v.optional(v.boolean()) },
+  handler: async (ctx, args): Promise<BackfillSummary> => {
     const targets: BackfillTarget[] = await ctx.runQuery(
       internal.visits.listMissingCommentTranslations,
-      {}
+      args.force === undefined ? {} : { force: args.force }
     )
 
     const summary: BackfillSummary = {

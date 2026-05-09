@@ -393,6 +393,39 @@ export const update = mutation({
   },
 })
 
+export const regenerateCommentTranslations = mutation({
+  args: { id: v.id("visits") },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx)
+
+    const visit = await ctx.db.get(args.id)
+    if (!visit) throw new Error("Visit not found")
+
+    if (!visit.comment.trim()) {
+      await ctx.db.patch(args.id, {
+        commentEn: undefined,
+        commentEs: undefined,
+        commentTranslatedFrom: undefined,
+        commentTranslationStatus: undefined,
+      })
+      return { queued: false }
+    }
+
+    await ctx.db.patch(args.id, {
+      commentEn: undefined,
+      commentEs: undefined,
+      commentTranslatedFrom: undefined,
+      commentTranslationStatus: "pending",
+    })
+
+    await ctx.scheduler.runAfter(0, internal.translate.translateVisitComment, {
+      id: args.id,
+    })
+
+    return { queued: true }
+  },
+})
+
 export const remove = mutation({
   args: { id: v.id("visits") },
   handler: async (ctx, args) => {
@@ -422,14 +455,14 @@ export const getForTranslation = internalQuery({
 })
 
 export const listMissingCommentTranslations = internalQuery({
-  args: {},
-  handler: async (ctx) => {
+  args: { force: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
     const visits = await ctx.db.query("visits").collect()
     return visits
       .filter(
         (visit) =>
           visit.comment.trim().length > 0 &&
-          visit.commentTranslatedFrom !== visit.comment
+          (args.force || visit.commentTranslatedFrom !== visit.comment)
       )
       .map((visit) => ({ _id: visit._id, comment: visit.comment }))
   },

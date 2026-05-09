@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { PhotoCarousel } from "@/components/photo-carousel"
+import { RegenerateTranslationsButton } from "@/components/regenerate-translations-button"
 import { StarRatingDisplay } from "@/components/star-rating"
 import { StyleChip } from "@/components/style-chip"
 import { TranslatedComment } from "@/components/translated-comment"
@@ -127,7 +128,16 @@ export default function VisitDetailPage() {
               <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
                 Notes
               </h2>
-              {visit.comment.trim() ? <LanguageSwitcher size="xs" /> : null}
+              {visit.comment.trim() ? (
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {showSamples ? null : (
+                    <RegenerateTranslationsButton
+                      visitId={visit._id as Id<"visits">}
+                    />
+                  )}
+                  <LanguageSwitcher size="xs" />
+                </div>
+              ) : null}
             </div>
             <TranslatedComment
               ko={visit.comment}
