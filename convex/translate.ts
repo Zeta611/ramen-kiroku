@@ -1,4 +1,3 @@
-import { jsonrepair } from "jsonrepair"
 import { v } from "convex/values"
 
 import { internal } from "./_generated/api"
@@ -6,7 +5,10 @@ import { internalAction } from "./_generated/server"
 import type { Id } from "./_generated/dataModel"
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-const DEFAULT_MODEL = "anthropic/claude-haiku-4-5"
+const DEFAULT_MODEL = "anthropic/claude-haiku-4.5"
+const EN_MARKER = "<<<EN>>>"
+const ES_MARKER = "<<<ES>>>"
+const END_MARKER = "<<<END>>>"
 
 const SYSTEM_PROMPT = `You are a translator for a personal Korean ramen blog.
 You translate the author's casual Korean notes about ramen meals into:
@@ -19,9 +21,14 @@ Rules:
 - For "es", write like a casual first-person food blog, not formal review prose. Avoid stiff, academic, or Spain-leaning vocabulary. Prefer everyday Mexican/Latin American choices such as "carro" over "coche", "manejar" over "conducir", "estacionamiento" over "aparcamiento", and "mesero/a" over "camarero/a" when those ideas appear.
 - For "es", keep technical ramen terms natural and readable. It is okay to keep terms like shoyu, shio, chashu, ajitamago, menma, tsukedare, and wari untranslated when a Spanish translation would sound forced.
 - Keep the meaning faithful; do not add commentary, disclaimers, or quotation marks.
-- Respond with a single JSON object: { "en": "...", "es": "..." }. No surrounding text.
-- Output STRICT JSON only. Do NOT use JavaScript escape sequences. In particular, the apostrophe character (') and forward slash (/) must NOT be escaped — write them literally. The only valid string escapes are \\", \\\\, \\n, \\r, \\t, and \\uXXXX.
-- CRITICAL: Inside JSON string values, encode every line break as the two literal characters \\n (backslash + lowercase n). Do NOT put raw newline characters inside the "..." values; that would make the JSON unparseable.`
+- Do not return JSON. Do not escape quotes, apostrophes, backslashes, or line breaks.
+- Return exactly this format, with no extra text before or after:
+<<<EN>>>
+English translation here
+<<<ES>>>
+Spanish translation here
+<<<END>>>
+- Do not include the markers inside either translation.`
 
 type OpenRouterChatResponse = {
   choices?: Array<{
@@ -30,6 +37,57 @@ type OpenRouterChatResponse = {
     }
   }>
   error?: { message?: string; code?: number | string }
+}
+
+function stripOuterCodeFence(content: string): string {
+  const trimmed = content.trim()
+  const fenceMatch = /^```(?:[a-zA-Z0-9_-]+)?\s*\n([\s\S]*?)\n?```\s*$/.exec(
+    trimmed
+  )
+  return fenceMatch ? fenceMatch[1].trim() : trimmed
+}
+
+function cleanDelimitedSection(section: string): string {
+  return section
+    .replace(/^\r?\n/, "")
+    .replace(/\r?\n$/, "")
+    .trim()
+}
+
+function parseDelimitedTranslations(content: string): {
+  en: string
+  es: string
+} {
+  const normalized = stripOuterCodeFence(content)
+  const enStart = normalized.indexOf(EN_MARKER)
+  const esStart = normalized.indexOf(ES_MARKER)
+  const endStart = normalized.indexOf(END_MARKER)
+
+  if (
+    enStart < 0 ||
+    esStart < 0 ||
+    endStart < 0 ||
+    !(enStart < esStart && esStart < endStart)
+  ) {
+    throw new Error(
+      `OpenRouter response did not match translation markers. Content: ${content.slice(0, 500)}`
+    )
+  }
+
+  const en = cleanDelimitedSection(
+    normalized.slice(enStart + EN_MARKER.length, esStart)
+  )
+  const es = cleanDelimitedSection(
+    normalized.slice(esStart + ES_MARKER.length, endStart)
+  )
+
+  if (!en || !es) {
+    throw new Error(
+      `OpenRouter response had empty translation section. Content: ${content.slice(0, 500)}`
+    )
+  }
+
+  return { en, es }
 }
 
 async function translateCommentRaw(
@@ -55,7 +113,6 @@ async function translateCommentRaw(
     },
     body: JSON.stringify({
       model,
-      response_format: { type: "json_object" },
       temperature: 0.3,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
@@ -84,40 +141,14 @@ async function translateCommentRaw(
     throw new Error("OpenRouter returned no content")
   }
 
-  let parsed: unknown
   try {
-    parsed = JSON.parse(content)
-  } catch (strictError) {
-    try {
-      parsed = JSON.parse(jsonrepair(content))
-    } catch (repairError) {
-      const cause =
-        repairError instanceof Error
-          ? repairError.message
-          : strictError instanceof Error
-            ? strictError.message
-            : "unknown parse error"
-      throw new Error(
-        `OpenRouter returned non-JSON content (length=${content.length}). ` +
-          `Repair failed: ${cause}. Content: ${content}`
-      )
-    }
-  }
-
-  if (
-    !parsed ||
-    typeof parsed !== "object" ||
-    typeof (parsed as { en?: unknown }).en !== "string" ||
-    typeof (parsed as { es?: unknown }).es !== "string"
-  ) {
+    return parseDelimitedTranslations(content)
+  } catch (error) {
     throw new Error(
-      `OpenRouter response did not match { en: string, es: string }: ${content.slice(0, 200)}`
+      error instanceof Error
+        ? error.message
+        : `OpenRouter response could not be parsed. Content: ${content.slice(0, 500)}`
     )
-  }
-
-  return {
-    en: (parsed as { en: string }).en,
-    es: (parsed as { es: string }).es,
   }
 }
 
