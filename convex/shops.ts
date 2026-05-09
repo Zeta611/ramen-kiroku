@@ -196,6 +196,13 @@ function compareNullableDates(
   return direction === "asc" ? a.localeCompare(b) : b.localeCompare(a)
 }
 
+function compareEntryCreationTimeDesc(
+  a: { _sortEntryCreationTime: number },
+  b: { _sortEntryCreationTime: number }
+) {
+  return b._sortEntryCreationTime - a._sortEntryCreationTime
+}
+
 async function summarizeBrowseShop(
   ctx: QueryCtx,
   shop: Doc<"shops">,
@@ -238,6 +245,7 @@ async function summarizeBrowseShop(
     latestVisit,
     latestPhoto,
     _sortVisitedOn: latestVisit?.visitedOn ?? null,
+    _sortEntryCreationTime: latestVisit?._creationTime ?? shop._creationTime,
     _sortRating:
       ratings.length > 0
         ? {
@@ -300,6 +308,7 @@ export const browse = query({
       if (sortBy === "visitedOn_asc") {
         return (
           compareNullableDates(a._sortVisitedOn, b._sortVisitedOn, "asc") ||
+          compareEntryCreationTimeDesc(a, b) ||
           a.name.localeCompare(b.name)
         )
       }
@@ -326,6 +335,7 @@ export const browse = query({
       }
       return (
         compareNullableDates(a._sortVisitedOn, b._sortVisitedOn, "desc") ||
+        compareEntryCreationTimeDesc(a, b) ||
         a.name.localeCompare(b.name)
       )
     })
