@@ -346,6 +346,7 @@ export function VisitForm({
           <Textarea
             value={visit.comment}
             rows={8}
+            className="resize-y"
             onChange={(event) =>
               updateVisitFields({ comment: event.target.value })
             }
