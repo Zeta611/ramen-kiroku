@@ -19,6 +19,11 @@ const STATUS_HINTS: Record<
   },
 }
 
+const TRANSLATED_HINTS: Record<Exclude<Locale, "ko">, string> = {
+  en: "Translated from Korean",
+  es: "Traducido del coreano",
+}
+
 export function TranslatedComment({
   ko,
   en,
@@ -48,9 +53,14 @@ export function TranslatedComment({
   const translated = locale === "en" ? en : es
   if (translated) {
     return (
-      <p lang={locale} className="text-sm leading-7 whitespace-pre-wrap">
-        {translated}
-      </p>
+      <div className="grid gap-2">
+        <p className="text-xs tracking-wide text-muted-foreground italic">
+          {TRANSLATED_HINTS[locale]}
+        </p>
+        <p lang={locale} className="text-sm leading-7 whitespace-pre-wrap">
+          {translated}
+        </p>
+      </div>
     )
   }
 

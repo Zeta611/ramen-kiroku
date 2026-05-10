@@ -11,6 +11,12 @@ const LABELS: Record<Locale, string> = {
   es: "ES",
 }
 
+const FLAGS: Record<Locale, string> = {
+  ko: "🇰🇷",
+  en: "🇺🇸",
+  es: "🇲🇽",
+}
+
 const FULL_NAMES: Record<Locale, string> = {
   ko: "한국어 (original)",
   en: "English",
@@ -39,12 +45,14 @@ export function LanguageSwitcher({
             key={value}
             type="button"
             size={size}
-            variant={isSelected ? "default" : "outline"}
+            variant="ghost"
+            className={isSelected ? "bg-muted text-foreground" : undefined}
             aria-pressed={isSelected}
             title={FULL_NAMES[value]}
             onClick={() => setLocale(value)}
           >
             {LABELS[value]}
+            <span aria-hidden>{FLAGS[value]}</span>
           </Button>
         )
       })}
