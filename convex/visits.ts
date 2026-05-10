@@ -210,11 +210,17 @@ function applyVisitFilters(
 function sortVisits(visits: Doc<"visits">[], sortBy: string) {
   return [...visits].sort((a, b) => {
     if (sortBy === "visitedOn_asc")
-      return a.visitedOn.localeCompare(b.visitedOn)
+      return (
+        a.visitedOn.localeCompare(b.visitedOn) ||
+        b._creationTime - a._creationTime
+      )
     if (sortBy === "rating_desc") return b.ratingOverall - a.ratingOverall
     if (sortBy === "rating_asc") return a.ratingOverall - b.ratingOverall
     if (sortBy === "created_desc") return b._creationTime - a._creationTime
-    return b.visitedOn.localeCompare(a.visitedOn)
+    return (
+      b.visitedOn.localeCompare(a.visitedOn) ||
+      b._creationTime - a._creationTime
+    )
   })
 }
 
