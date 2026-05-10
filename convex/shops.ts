@@ -9,6 +9,7 @@ import {
 } from "./_generated/server"
 import type { Doc, Id } from "./_generated/dataModel"
 import { requireOwner } from "./lib/auth"
+import { buildVisitSearchText } from "./lib/search"
 
 const country = v.union(v.literal("JP"), v.literal("KR"))
 const ramenStyle = v.union(
@@ -63,6 +64,52 @@ const wishlistShopFields = {
 
 function normalize(value: string) {
   return value.trim().toLocaleLowerCase()
+}
+
+function searchTerms(value: string | undefined) {
+  const normalized = value?.trim().toLocaleLowerCase()
+  return normalized ? normalized.split(/\s+/).filter(Boolean) : []
+}
+
+function matchesSearchText(parts: Array<string | undefined>, terms: string[]) {
+  if (terms.length === 0) return true
+
+  const haystack = normalize(
+    parts
+      .filter((part): part is string => Boolean(part && part.trim()))
+      .join(" ")
+  )
+
+  return terms.every((term) => haystack.includes(term))
+}
+
+function matchesShopText(shop: Doc<"shops">, terms: string[]) {
+  return matchesSearchText(
+    [
+      shop.name,
+      shop.nameJa,
+      shop.country,
+      shop.city,
+      shop.area,
+      shop.addressLine,
+    ],
+    terms
+  )
+}
+
+function matchesVisitText(visit: Doc<"visits">, terms: string[]) {
+  return matchesSearchText(
+    [
+      visit.shopName,
+      visit.shopNameJa,
+      visit.bowlName,
+      visit.comment,
+      visit.commentEn,
+      visit.commentEs,
+      ...visit.toppings,
+    ],
+    terms
+  )
 }
 
 function assertHttpsUrl(value: string | undefined, label: string) {
@@ -213,7 +260,8 @@ async function summarizeBrowseShop(
     fromDate?: string
     toDate?: string
     wouldRevisit?: boolean
-  }
+  },
+  terms: string[]
 ) {
   const visits = await ctx.db
     .query("visits")
@@ -223,8 +271,14 @@ async function summarizeBrowseShop(
   const visitFiltersActive = hasVisitFilters(args)
   const relevantVisits = visitFiltersActive ? filteredVisits : visits
 
-  if (relevantVisits.length === 0 && shop.wishlisted !== true) return null
   if (visitFiltersActive && relevantVisits.length === 0) return null
+  if (
+    terms.length > 0 &&
+    !matchesShopText(shop, terms) &&
+    !relevantVisits.some((visit) => matchesVisitText(visit, terms))
+  )
+    return null
+  if (relevantVisits.length === 0 && shop.wishlisted !== true) return null
 
   relevantVisits.sort((a, b) => b.visitedOn.localeCompare(a.visitedOn))
   const latestVisit = relevantVisits[0] ?? null
@@ -278,6 +332,7 @@ export const list = query({
 
 export const browse = query({
   args: {
+    q: v.optional(v.string()),
     country: v.optional(country),
     city: v.optional(v.string()),
     area: v.optional(v.string()),
@@ -290,6 +345,7 @@ export const browse = query({
     sort: v.optional(sort),
   },
   handler: async (ctx, args) => {
+    const terms = searchTerms(args.q)
     let shops = await ctx.db.query("shops").collect()
 
     if (args.country)
@@ -299,7 +355,7 @@ export const browse = query({
 
     const summarized = (
       await Promise.all(
-        shops.map((shop) => summarizeBrowseShop(ctx, shop, args))
+        shops.map((shop) => summarizeBrowseShop(ctx, shop, args, terms))
       )
     ).filter((shop) => shop !== null)
 
@@ -363,12 +419,14 @@ export const browse = query({
 
 export const wishlistBrowse = query({
   args: {
+    q: v.optional(v.string()),
     country: v.optional(country),
     city: v.optional(v.string()),
     area: v.optional(v.string()),
     sort: v.optional(placeSort),
   },
   handler: async (ctx, args) => {
+    const terms = searchTerms(args.q)
     let shops = (await ctx.db.query("shops").collect()).filter(
       (shop) => shop.wishlisted === true
     )
@@ -377,6 +435,8 @@ export const wishlistBrowse = query({
       shops = shops.filter((shop) => shop.country === args.country)
     if (args.city) shops = shops.filter((shop) => shop.city === args.city)
     if (args.area) shops = shops.filter((shop) => shop.area === args.area)
+    if (terms.length > 0)
+      shops = shops.filter((shop) => matchesShopText(shop, terms))
 
     const summarized = await Promise.all(
       shops.map((shop) => summarizeShop(ctx, shop))
@@ -591,6 +651,15 @@ export const update = mutation({
           country: patch.country,
           city: patch.city,
           area: patch.area,
+          searchText: buildVisitSearchText({
+            shopName: patch.name,
+            shopNameJa: patch.nameJa,
+            bowlName: visit.bowlName,
+            comment: visit.comment,
+            commentEn: visit.commentEn,
+            commentEs: visit.commentEs,
+            toppings: visit.toppings,
+          }),
         })
       )
     )

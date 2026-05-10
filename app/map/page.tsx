@@ -11,6 +11,7 @@ import {
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { SAMPLE_SHOPS, SAMPLE_VISITS, usingSampleData } from "@/lib/sample-data"
+import { useDebouncedValue } from "@/lib/use-debounced-value"
 
 type BrowseShop = {
   _id: Id<"shops">
@@ -27,7 +28,25 @@ type BrowseShop = {
 
 type DisplayShop = MapBrowserShop
 
+function searchTerms(value: string | undefined) {
+  const normalized = value?.trim().toLocaleLowerCase()
+  return normalized ? normalized.split(/\s+/).filter(Boolean) : []
+}
+
+function matchesSearchText(parts: Array<string | undefined>, terms: string[]) {
+  if (terms.length === 0) return true
+
+  const haystack = parts
+    .filter((part): part is string => Boolean(part && part.trim()))
+    .join(" ")
+    .toLocaleLowerCase()
+
+  return terms.every((term) => haystack.includes(term))
+}
+
 function filterSampleShops(filters: FeedFilters) {
+  const terms = searchTerms(filters.q)
+
   return SAMPLE_SHOPS.filter((shop) => {
     if (filters.country && shop.country !== filters.country) return false
     if (filters.city && shop.city !== filters.city) return false
@@ -42,29 +61,64 @@ function filterSampleShops(filters: FeedFilters) {
       filters.toDate !== undefined ||
       filters.wouldRevisit !== undefined
 
+    const relevantVisits = hasVisitFilters
+      ? visits.filter((visit) => {
+          if (filters.style && visit.style !== filters.style) return false
+          if (
+            filters.minRating !== undefined &&
+            visit.ratingOverall < filters.minRating
+          )
+            return false
+          if (
+            filters.maxRating !== undefined &&
+            visit.ratingOverall > filters.maxRating
+          )
+            return false
+          if (filters.fromDate && visit.visitedOn < filters.fromDate)
+            return false
+          if (filters.toDate && visit.visitedOn > filters.toDate) return false
+          if (
+            filters.wouldRevisit !== undefined &&
+            visit.wouldRevisit !== filters.wouldRevisit
+          )
+            return false
+          return true
+        })
+      : visits
+
+    if (
+      terms.length > 0 &&
+      !matchesSearchText(
+        [
+          shop.name,
+          shop.nameJa,
+          shop.country,
+          shop.city,
+          shop.area,
+          shop.addressLine,
+        ],
+        terms
+      ) &&
+      !relevantVisits.some((visit) =>
+        matchesSearchText(
+          [
+            visit.shopName,
+            visit.shopNameJa,
+            visit.bowlName,
+            visit.comment,
+            visit.commentEn,
+            visit.commentEs,
+            ...visit.toppings,
+          ],
+          terms
+        )
+      )
+    )
+      return false
+
     if (!hasVisitFilters) return true
 
-    return visits.some((visit) => {
-      if (filters.style && visit.style !== filters.style) return false
-      if (
-        filters.minRating !== undefined &&
-        visit.ratingOverall < filters.minRating
-      )
-        return false
-      if (
-        filters.maxRating !== undefined &&
-        visit.ratingOverall > filters.maxRating
-      )
-        return false
-      if (filters.fromDate && visit.visitedOn < filters.fromDate) return false
-      if (filters.toDate && visit.visitedOn > filters.toDate) return false
-      if (
-        filters.wouldRevisit !== undefined &&
-        visit.wouldRevisit !== filters.wouldRevisit
-      )
-        return false
-      return true
-    })
+    return relevantVisits.length > 0
   })
     .map((shop): DisplayShop => {
       const visits = SAMPLE_VISITS.filter((visit) => visit.shopId === shop._id)
@@ -85,7 +139,11 @@ export default function MapPage() {
     sort: "visitedOn_desc",
   })
   const showSamples = usingSampleData()
-  const shops = useQuery(api.shops.browse, showSamples ? "skip" : filters)
+  const debouncedQ = useDebouncedValue(filters.q, 200)
+  const shops = useQuery(
+    api.shops.browse,
+    showSamples ? "skip" : { ...filters, q: debouncedQ }
+  )
   const realShops = shops as BrowseShop[] | undefined
   const displayShops: DisplayShop[] | undefined = showSamples
     ? filterSampleShops(filters)

@@ -31,6 +31,7 @@ import {
 } from "@/lib/ramen"
 
 export type FeedFilters = {
+  q?: string
   country?: CountryCode
   city?: string
   area?: string
@@ -69,19 +70,21 @@ export function FilterBar({
   if (!mounted) {
     return (
       <div className="sticky top-14 z-20 -mx-4 border-y bg-background/95 px-4 py-3 backdrop-blur sm:mx-0 sm:border">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-              Browse
-            </p>
-            <p className="hidden truncate text-sm sm:block">
-              Filter by style, place, date, rating
-            </p>
+        <div className="grid gap-3 sm:flex sm:items-center sm:gap-4">
+          <Input
+            value=""
+            onChange={() => {}}
+            placeholder="Search shops, bowls, comments"
+            disabled
+            aria-label="Search visits"
+            className="sm:max-w-xs sm:flex-1"
+          />
+          <div className="flex items-center gap-4 sm:ml-auto">
+            <Button type="button" variant="outline" disabled>
+              <RiFilter3Line />
+              <span className="hidden sm:block">Filters</span>
+            </Button>
           </div>
-          <Button type="button" variant="outline" disabled>
-            <RiFilter3Line />
-            <span className="hidden sm:block">Filters</span>
-          </Button>
         </div>
       </div>
     )
@@ -278,16 +281,15 @@ export function FilterBar({
 
   return (
     <div className="sticky top-14 z-20 -mx-4 border-y bg-background/95 px-4 py-3 backdrop-blur sm:mx-0 sm:border">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-            Browse
-          </p>
-          <p className="hidden truncate text-sm sm:block">
-            Filter by style, place, date, rating
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
+      <div className="grid gap-3 sm:flex sm:items-center sm:gap-4">
+        <Input
+          value={filters.q ?? ""}
+          placeholder="Search shops, bowls, comments"
+          onChange={(event) => set({ q: event.target.value || undefined })}
+          aria-label="Search visits"
+          className="sm:max-w-xs sm:flex-1"
+        />
+        <div className="flex items-center gap-4 sm:ml-auto">
           <div
             className="flex items-center gap-0.5"
             role="group"

@@ -17,6 +17,7 @@ import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { SAMPLE_WISHLIST_SHOPS, usingSampleData } from "@/lib/sample-data"
 import type { PlaceFilters } from "@/lib/ramen"
+import { useDebouncedValue } from "@/lib/use-debounced-value"
 
 type WishlistShop = {
   _id: Id<"shops">
@@ -31,11 +32,43 @@ type WishlistShop = {
   latestPhoto?: { thumbUrl: string; width: number; height: number } | null
 }
 
+function searchTerms(value: string | undefined) {
+  const normalized = value?.trim().toLocaleLowerCase()
+  return normalized ? normalized.split(/\s+/).filter(Boolean) : []
+}
+
+function matchesSearchText(parts: Array<string | undefined>, terms: string[]) {
+  if (terms.length === 0) return true
+
+  const haystack = parts
+    .filter((part): part is string => Boolean(part && part.trim()))
+    .join(" ")
+    .toLocaleLowerCase()
+
+  return terms.every((term) => haystack.includes(term))
+}
+
 function filterSampleWishlist(filters: PlaceFilters): MapBrowserShop[] {
+  const terms = searchTerms(filters.q)
+
   return SAMPLE_WISHLIST_SHOPS.filter((shop) => {
     if (filters.country && shop.country !== filters.country) return false
     if (filters.city && shop.city !== filters.city) return false
     if (filters.area && shop.area !== filters.area) return false
+    if (
+      !matchesSearchText(
+        [
+          shop.name,
+          shop.nameJa,
+          shop.country,
+          shop.city,
+          shop.area,
+          shop.addressLine,
+        ],
+        terms
+      )
+    )
+      return false
     return true
   })
     .map((shop) => ({
@@ -60,9 +93,10 @@ export default function WishlistPage() {
     sort: "name_asc",
   })
   const showSamples = usingSampleData()
+  const debouncedQ = useDebouncedValue(filters.q, 200)
   const shops = useQuery(
     api.shops.wishlistBrowse,
-    showSamples ? "skip" : filters
+    showSamples ? "skip" : { ...filters, q: debouncedQ }
   )
   const realShops = shops as WishlistShop[] | undefined
   const displayShops: MapBrowserShop[] | undefined = showSamples

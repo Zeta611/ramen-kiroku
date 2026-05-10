@@ -65,13 +65,18 @@ export default defineSchema({
     commentTranslationStatus: v.optional(
       v.union(v.literal("pending"), v.literal("error"))
     ),
+    searchText: v.optional(v.string()),
   })
     .index("by_visitedOn", ["visitedOn"])
     .index("by_shop", ["shopId"])
     .index("by_style", ["style"])
     .index("by_rating", ["ratingOverall"])
     .index("by_country_city", ["country", "city"])
-    .index("by_area", ["area"]),
+    .index("by_area", ["area"])
+    .searchIndex("search_text", {
+      searchField: "searchText",
+      filterFields: ["country", "city", "area", "style", "wouldRevisit"],
+    }),
 
   photos: defineTable({
     visitId: v.id("visits"),

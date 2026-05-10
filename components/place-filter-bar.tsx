@@ -49,22 +49,26 @@ export function PlaceFilterBar({
   const mounted = useMounted()
   const set = (patch: Partial<PlaceFilters>) =>
     onChange({ ...filters, ...patch })
-  const clear = () => onChange({ country: "KR", sort: "name_asc" })
+  const clear = () => onChange({ sort: "name_asc" })
 
   if (!mounted) {
     return (
       <div className="sticky top-14 z-20 -mx-4 border-y bg-background/95 px-4 py-3 backdrop-blur sm:mx-0 sm:border">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-              Browse
-            </p>
-            <p className="truncate text-sm">Filter by place</p>
+        <div className="grid gap-3 sm:flex sm:items-center sm:gap-4">
+          <Input
+            value=""
+            onChange={() => {}}
+            placeholder="Search shops, bowls, comments"
+            disabled
+            aria-label="Search visits"
+            className="sm:max-w-xs sm:flex-1"
+          />
+          <div className="flex items-center gap-4 sm:ml-auto">
+            <Button type="button" variant="outline" disabled>
+              <RiFilter3Line />
+              <span className="hidden sm:block">Filters</span>
+            </Button>
           </div>
-          <Button type="button" variant="outline" disabled>
-            <RiFilter3Line data-icon="inline-start" />
-            Filters
-          </Button>
         </div>
       </div>
     )
@@ -149,14 +153,15 @@ export function PlaceFilterBar({
 
   return (
     <div className="sticky top-14 z-20 -mx-4 border-y bg-background/95 px-4 py-3 backdrop-blur sm:mx-0 sm:border">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-            Browse
-          </p>
-          <p className="truncate text-sm">Filter by place</p>
-        </div>
-        <div className="flex items-center gap-1.5">
+      <div className="grid gap-3 sm:flex sm:items-center sm:gap-4">
+        <Input
+          value={filters.q ?? ""}
+          placeholder="Search shops, bowls, comments"
+          onChange={(event) => set({ q: event.target.value || undefined })}
+          aria-label="Search visits"
+          className="sm:max-w-xs sm:flex-1"
+        />
+        <div className="flex items-center gap-4 sm:ml-auto">
           <div
             className="flex items-center gap-0.5"
             role="group"
@@ -189,28 +194,26 @@ export function PlaceFilterBar({
               )
             })}
           </div>
-          <div className="hidden min-w-[220px] sm:block">
-            <Select
-              value={filters.sort}
-              onValueChange={(value) => set({ sort: value as PlaceSort })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PLACE_SORT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Select
+            value={filters.sort}
+            onValueChange={(value) => set({ sort: value as PlaceSort })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PLACE_SORT_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Sheet>
             <SheetTrigger asChild>
               <Button type="button" variant="outline">
-                <RiFilter3Line data-icon="inline-start" />
-                Filters
+                <RiFilter3Line />
+                <span className="hidden sm:block">Filters</span>
               </Button>
             </SheetTrigger>
             <SheetContent className="overflow-y-auto">

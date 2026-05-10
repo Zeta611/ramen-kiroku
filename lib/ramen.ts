@@ -127,6 +127,7 @@ export const PLACE_SORT_OPTIONS = [
 export type PlaceSort = (typeof PLACE_SORT_OPTIONS)[number]["value"]
 
 export type PlaceFilters = {
+  q?: string
   country?: CountryCode
   city?: string
   area?: string

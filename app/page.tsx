@@ -7,13 +7,18 @@ import { api } from "@/convex/_generated/api"
 import { FilterBar, type FeedFilters } from "@/components/filter-bar"
 import { PhotoGrid } from "@/components/photo-grid"
 import { SAMPLE_VISITS, usingSampleData } from "@/lib/sample-data"
+import { useDebouncedValue } from "@/lib/use-debounced-value"
 
 export default function Page() {
   const [filters, setFilters] = React.useState<FeedFilters>({
     sort: "visitedOn_desc",
   })
   const showSamples = usingSampleData()
-  const visits = useQuery(api.visits.list, showSamples ? "skip" : filters)
+  const debouncedQ = useDebouncedValue(filters.q, 200)
+  const visits = useQuery(
+    api.visits.list,
+    showSamples ? "skip" : { ...filters, q: debouncedQ }
+  )
   const displayVisits = showSamples ? SAMPLE_VISITS : visits
 
   return (

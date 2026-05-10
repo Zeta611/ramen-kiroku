@@ -10,6 +10,7 @@ import {
 } from "./_generated/server"
 import type { Doc, Id } from "./_generated/dataModel"
 import { requireOwner } from "./lib/auth"
+import { buildVisitSearchText, expandCjkBigrams } from "./lib/search"
 
 const country = v.union(v.literal("JP"), v.literal("KR"))
 const currency = v.union(v.literal("JPY"), v.literal("KRW"))
@@ -226,6 +227,7 @@ function sortVisits(visits: Doc<"visits">[], sortBy: string) {
 
 export const list = query({
   args: {
+    q: v.optional(v.string()),
     country: v.optional(country),
     city: v.optional(v.string()),
     area: v.optional(v.string()),
@@ -239,10 +241,26 @@ export const list = query({
   },
   handler: async (ctx, args) => {
     const sortBy = args.sort ?? "visitedOn_desc"
-    const visits = sortVisits(
-      applyVisitFilters(await ctx.db.query("visits").collect(), args),
-      sortBy
-    )
+    const trimmed = args.q?.trim()
+    const expanded = trimmed ? expandCjkBigrams(trimmed) : undefined
+
+    const raw = expanded
+      ? await ctx.db
+          .query("visits")
+          .withSearchIndex("search_text", (q) => {
+            let chain = q.search("searchText", expanded)
+            if (args.country) chain = chain.eq("country", args.country)
+            if (args.city) chain = chain.eq("city", args.city)
+            if (args.area) chain = chain.eq("area", args.area)
+            if (args.style) chain = chain.eq("style", args.style)
+            if (args.wouldRevisit !== undefined)
+              chain = chain.eq("wouldRevisit", args.wouldRevisit)
+            return chain
+          })
+          .take(100)
+      : await ctx.db.query("visits").collect()
+
+    const visits = sortVisits(applyVisitFilters(raw, args), sortBy)
 
     return Promise.all(
       visits.map(async (visit) => {
@@ -307,6 +325,16 @@ export const createWithPhotos = mutation({
 
     const shop = await findOrCreateShop(ctx, args.shop)
 
+    const searchText = buildVisitSearchText({
+      shopName: shop.name,
+      shopNameJa: shop.nameJa,
+      bowlName: args.visit.bowlName,
+      comment: args.visit.comment,
+      commentEn: undefined,
+      commentEs: undefined,
+      toppings: args.visit.toppings,
+    })
+
     const visitId = await ctx.db.insert("visits", {
       shopId: shop._id,
       shopName: shop.name,
@@ -318,6 +346,7 @@ export const createWithPhotos = mutation({
       commentTranslationStatus: args.visit.comment.trim()
         ? "pending"
         : undefined,
+      searchText,
     })
 
     await Promise.all(
@@ -373,6 +402,16 @@ export const update = mutation({
         }
       : {}
 
+    const searchText = buildVisitSearchText({
+      shopName: shop.name,
+      shopNameJa: shop.nameJa,
+      bowlName: args.visit.bowlName,
+      comment: newComment,
+      commentEn: commentChanged ? undefined : existing.commentEn,
+      commentEs: commentChanged ? undefined : existing.commentEs,
+      toppings: args.visit.toppings,
+    })
+
     await ctx.db.patch(args.id, {
       shopId: shop._id,
       shopName: shop.name,
@@ -382,6 +421,7 @@ export const update = mutation({
       area: shop.area,
       ...args.visit,
       ...translationPatch,
+      searchText,
     })
 
     // Re-translate when the source changed, or when the previous attempt
@@ -407,12 +447,23 @@ export const regenerateCommentTranslations = mutation({
     const visit = await ctx.db.get(args.id)
     if (!visit) throw new Error("Visit not found")
 
+    const searchText = buildVisitSearchText({
+      shopName: visit.shopName,
+      shopNameJa: visit.shopNameJa,
+      bowlName: visit.bowlName,
+      comment: visit.comment,
+      commentEn: undefined,
+      commentEs: undefined,
+      toppings: visit.toppings,
+    })
+
     if (!visit.comment.trim()) {
       await ctx.db.patch(args.id, {
         commentEn: undefined,
         commentEs: undefined,
         commentTranslatedFrom: undefined,
         commentTranslationStatus: undefined,
+        searchText,
       })
       return { queued: false }
     }
@@ -422,6 +473,7 @@ export const regenerateCommentTranslations = mutation({
       commentEs: undefined,
       commentTranslatedFrom: undefined,
       commentTranslationStatus: "pending",
+      searchText,
     })
 
     await ctx.scheduler.runAfter(0, internal.translate.translateVisitComment, {
@@ -489,11 +541,22 @@ export const setCommentTranslations = internalMutation({
     // still matches the current comment.
     if (visit.comment !== args.source) return
 
+    const searchText = buildVisitSearchText({
+      shopName: visit.shopName,
+      shopNameJa: visit.shopNameJa,
+      bowlName: visit.bowlName,
+      comment: visit.comment,
+      commentEn: args.en,
+      commentEs: args.es,
+      toppings: visit.toppings,
+    })
+
     await ctx.db.patch(args.id, {
       commentEn: args.en,
       commentEs: args.es,
       commentTranslatedFrom: args.source,
       commentTranslationStatus: undefined,
+      searchText,
     })
   },
 })
@@ -502,5 +565,26 @@ export const markCommentTranslationError = internalMutation({
   args: { id: v.id("visits") },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { commentTranslationStatus: "error" })
+  },
+})
+
+export const backfillSearchText = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const visits = await ctx.db.query("visits").collect()
+    for (const visit of visits) {
+      await ctx.db.patch(visit._id, {
+        searchText: buildVisitSearchText({
+          shopName: visit.shopName,
+          shopNameJa: visit.shopNameJa,
+          bowlName: visit.bowlName,
+          comment: visit.comment,
+          commentEn: visit.commentEn,
+          commentEs: visit.commentEs,
+          toppings: visit.toppings,
+        }),
+      })
+    }
+    return { patched: visits.length }
   },
 })
