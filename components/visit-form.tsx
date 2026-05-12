@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQuery } from "convex/react"
+import { useAction, useMutation, useQuery } from "convex/react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { toast } from "sonner"
@@ -8,7 +8,7 @@ import { toast } from "sonner"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { PhotoManager, type ManagedPhoto } from "@/components/photo-manager"
-import { PhotoUploader, type UploadedPhoto } from "@/components/photo-uploader"
+import type { UploadedPhoto } from "@/components/photo-uploader"
 import { RatingInput } from "@/components/star-rating"
 import { ShopPicker, type ShopFormValue } from "@/components/shop-picker"
 import { Button } from "@/components/ui/button"
@@ -51,7 +51,11 @@ type InitialVisit = {
   id: Id<"visits">
   shop: ShopFormValue
   visit: VisitFields
-  photos: ManagedPhoto[]
+  photos: InitialPhoto[]
+}
+
+type InitialPhoto = UploadedPhoto & {
+  _id: Id<"photos">
 }
 
 const TOPPING_OPTIONS = [
@@ -87,6 +91,49 @@ function createDefaultVisit(visitedOn: string): VisitFields {
   }
 }
 
+function createManagedPhotos(photos: InitialPhoto[] = []): ManagedPhoto[] {
+  return photos.map((photo, sortOrder) => ({
+    ...photo,
+    draftId: photo._id,
+    sortOrder,
+  }))
+}
+
+function createPhotoPayload(photos: ManagedPhoto[]) {
+  return photos.map((photo, sortOrder) => ({
+    url: photo.url,
+    key: photo.key,
+    thumbUrl: photo.thumbUrl,
+    thumbKey: photo.thumbKey,
+    width: photo.width,
+    height: photo.height,
+    sortOrder,
+  }))
+}
+
+function updatePhotoPayload(photos: ManagedPhoto[]) {
+  return photos.map((photo, sortOrder) => {
+    const payload = {
+      url: photo.url,
+      key: photo.key,
+      thumbUrl: photo.thumbUrl,
+      thumbKey: photo.thumbKey,
+      width: photo.width,
+      height: photo.height,
+      sortOrder,
+    }
+
+    return photo._id ? { id: photo._id, ...payload } : payload
+  })
+}
+
+function uploadedDraftKeys(photos: ManagedPhoto[]) {
+  return photos
+    .filter((photo) => !photo._id)
+    .flatMap((photo) => [photo.key, photo.thumbKey])
+    .filter(Boolean)
+}
+
 export function VisitForm({
   initial,
   initialVisitedOn,
@@ -98,19 +145,45 @@ export function VisitForm({
   const shops = useQuery(api.shops.list, {}) ?? []
   const createVisit = useMutation(api.visits.createWithPhotos)
   const updateVisit = useMutation(api.visits.update)
+  const deleteFiles = useAction(api.photoFiles.deleteUploadThingFiles)
   const [shop, setShop] = React.useState<ShopFormValue>(
     initial?.shop ?? defaultShop
   )
   const [visit, setVisit] = React.useState<VisitFields>(
     initial?.visit ?? createDefaultVisit(initialVisitedOn ?? "")
   )
-  const [photos, setPhotos] = React.useState<UploadedPhoto[]>([])
+  const [photos, setPhotos] = React.useState<ManagedPhoto[]>(() =>
+    createManagedPhotos(initial?.photos)
+  )
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [isCancelling, setIsCancelling] = React.useState(false)
 
   const isEdit = Boolean(initial)
+  const isBusy = isSubmitting || isCancelling
 
   function updateVisitFields(patch: Partial<VisitFields>) {
     setVisit((current) => ({ ...current, ...patch }))
+  }
+
+  async function deleteUploadedDrafts(draftPhotos: ManagedPhoto[]) {
+    const keys = uploadedDraftKeys(draftPhotos)
+    if (keys.length === 0) return
+
+    await deleteFiles({ keys })
+  }
+
+  async function onCancel() {
+    setIsCancelling(true)
+
+    try {
+      await deleteUploadedDrafts(photos)
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "UploadThing delete failed"
+      toast.error(message)
+    } finally {
+      router.back()
+    }
   }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -154,11 +227,31 @@ export function VisitForm({
       }
 
       if (initial) {
-        await updateVisit({ id: initial.id, ...payload })
+        const deletedPhotoKeys = await updateVisit({
+          id: initial.id,
+          ...payload,
+          photos: updatePhotoPayload(photos),
+        })
+
+        if (deletedPhotoKeys.length > 0) {
+          try {
+            await deleteFiles({ keys: deletedPhotoKeys })
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Removed photo files could not be deleted"
+            toast.error(message)
+          }
+        }
+
         toast.success("Visit updated")
         router.push(`/visit/${initial.id}`)
       } else {
-        const visitId = await createVisit({ ...payload, photos })
+        const visitId = await createVisit({
+          ...payload,
+          photos: createPhotoPayload(photos),
+        })
         toast.success("Visit created")
         router.push(`/visit/${visitId}`)
       }
@@ -354,19 +447,18 @@ export function VisitForm({
         </div>
       </section>
 
-      {initial ? (
-        <PhotoManager visitId={initial.id} initialPhotos={initial.photos} />
-      ) : (
-        <section className="border p-4">
-          <PhotoUploader photos={photos} onChange={setPhotos} />
-        </section>
-      )}
+      <PhotoManager photos={photos} onChange={setPhotos} disabled={isBusy} />
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => router.back()}>
-          Cancel
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isBusy}
+          onClick={() => void onCancel()}
+        >
+          {isCancelling ? "Cancelling" : "Cancel"}
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isBusy}>
           {isSubmitting ? "Saving" : isEdit ? "Save changes" : "Create visit"}
         </Button>
       </div>

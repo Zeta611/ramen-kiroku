@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 export function VisitActions({ visitId }: { visitId: Id<"visits"> }) {
   const router = useRouter()
   const removeVisit = useMutation(api.visits.remove)
-  const deleteFiles = useAction(api.photos.deleteUploadThingFiles)
+  const deleteFiles = useAction(api.photoFiles.deleteUploadThingFiles)
 
   async function onDelete() {
     if (!window.confirm("Delete this visit and its photos?")) return

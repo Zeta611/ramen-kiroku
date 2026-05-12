@@ -77,6 +77,17 @@ const photoInput = v.object({
   sortOrder: v.number(),
 })
 
+const photoUpdateInput = v.object({
+  id: v.optional(v.id("photos")),
+  url: v.string(),
+  key: v.string(),
+  thumbUrl: v.string(),
+  thumbKey: v.string(),
+  width: v.number(),
+  height: v.number(),
+  sortOrder: v.number(),
+})
+
 type ShopInput = {
   id?: Id<"shops">
   name: string
@@ -90,6 +101,19 @@ type ShopInput = {
   googleMapsUrl?: string
   tabelogUrl?: string
 }
+
+type PhotoInput = {
+  id?: Id<"photos">
+  url: string
+  key: string
+  thumbUrl: string
+  thumbKey: string
+  width: number
+  height: number
+  sortOrder: number
+}
+
+const MAX_PHOTOS_PER_VISIT = 200
 
 function assertRating(value: number | undefined, label: string) {
   if (value === undefined) return
@@ -118,6 +142,23 @@ function assertHttpsUrl(value: string | undefined, label: string) {
 function assertShopUrls(shop: ShopInput) {
   assertHttpsUrl(shop.googleMapsUrl, "Google Maps URL")
   assertHttpsUrl(shop.tabelogUrl, "Tabelog URL")
+}
+
+function assertPhotoRefs(photos: PhotoInput[]) {
+  if (photos.length > MAX_PHOTOS_PER_VISIT) {
+    throw new Error(`A visit can have at most ${MAX_PHOTOS_PER_VISIT} photos`)
+  }
+
+  if (
+    photos.some(
+      (photo) =>
+        !photo.url || !photo.thumbUrl || !photo.key || !photo.thumbKey
+    )
+  ) {
+    throw new Error(
+      "Every photo must include original and thumbnail upload refs"
+    )
+  }
 }
 
 async function findOrCreateShop(ctx: MutationCtx, shop: ShopInput) {
@@ -172,6 +213,70 @@ async function findOrCreateShop(ctx: MutationCtx, shop: ShopInput) {
   const created = await ctx.db.get(shopId)
   if (!created) throw new Error("Unable to create shop")
   return created
+}
+
+async function reconcileVisitPhotos(
+  ctx: MutationCtx,
+  visitId: Id<"visits">,
+  submittedPhotos: PhotoInput[]
+) {
+  assertPhotoRefs(submittedPhotos)
+
+  const existingPhotos = await ctx.db
+    .query("photos")
+    .withIndex("by_visit", (q) => q.eq("visitId", visitId))
+    .take(MAX_PHOTOS_PER_VISIT + 1)
+
+  if (existingPhotos.length > MAX_PHOTOS_PER_VISIT) {
+    throw new Error(`A visit can have at most ${MAX_PHOTOS_PER_VISIT} photos`)
+  }
+
+  const existingById = new Map(
+    existingPhotos.map((photo) => [photo._id, photo])
+  )
+  const submittedExistingIds = new Set<Id<"photos">>()
+
+  for (const photo of submittedPhotos) {
+    if (!photo.id) continue
+    if (submittedExistingIds.has(photo.id)) {
+      throw new Error("Photo list includes a duplicate photo")
+    }
+    if (!existingById.has(photo.id)) {
+      throw new Error("Photo list is out of date. Reload and try again.")
+    }
+    submittedExistingIds.add(photo.id)
+  }
+
+  await Promise.all(
+    submittedPhotos.map((photo, sortOrder) => {
+      if (photo.id) {
+        return ctx.db.patch(photo.id, { sortOrder })
+      }
+
+      return ctx.db.insert("photos", {
+        visitId,
+        url: photo.url,
+        key: photo.key,
+        thumbUrl: photo.thumbUrl,
+        thumbKey: photo.thumbKey,
+        width: photo.width,
+        height: photo.height,
+        sortOrder,
+      })
+    })
+  )
+
+  const deletedKeys: string[] = []
+  await Promise.all(
+    existingPhotos.map((photo) => {
+      if (submittedExistingIds.has(photo._id)) return Promise.resolve()
+
+      deletedKeys.push(photo.key, photo.thumbKey)
+      return ctx.db.delete(photo._id)
+    })
+  )
+
+  return deletedKeys
 }
 
 function applyVisitFilters(
@@ -312,16 +417,7 @@ export const createWithPhotos = mutation({
     assertRating(args.visit.ratingNoodles, "Noodles rating")
     assertRating(args.visit.ratingToppings, "Toppings rating")
 
-    if (
-      args.photos.some(
-        (photo) =>
-          !photo.url || !photo.thumbUrl || !photo.key || !photo.thumbKey
-      )
-    ) {
-      throw new Error(
-        "Every photo must include original and thumbnail upload refs"
-      )
-    }
+    assertPhotoRefs(args.photos)
 
     const shop = await findOrCreateShop(ctx, args.shop)
 
@@ -350,10 +446,16 @@ export const createWithPhotos = mutation({
     })
 
     await Promise.all(
-      args.photos.map((photo) =>
+      args.photos.map((photo, sortOrder) =>
         ctx.db.insert("photos", {
           visitId,
-          ...photo,
+          url: photo.url,
+          key: photo.key,
+          thumbUrl: photo.thumbUrl,
+          thumbKey: photo.thumbKey,
+          width: photo.width,
+          height: photo.height,
+          sortOrder,
         })
       )
     )
@@ -375,6 +477,7 @@ export const update = mutation({
     id: v.id("visits"),
     shop: shopInput,
     visit: v.object(visitInput),
+    photos: v.optional(v.array(photoUpdateInput)),
   },
   handler: async (ctx, args) => {
     await requireOwner(ctx)
@@ -424,6 +527,10 @@ export const update = mutation({
       searchText,
     })
 
+    const deletedPhotoKeys = args.photos
+      ? await reconcileVisitPhotos(ctx, args.id, args.photos)
+      : []
+
     // Re-translate when the source changed, or when the previous attempt
     // never landed (e.g. an earlier transient error) — but only if there is
     // a non-empty comment to translate.
@@ -436,6 +543,8 @@ export const update = mutation({
         { id: args.id }
       )
     }
+
+    return deletedPhotoKeys
   },
 })
 

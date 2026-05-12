@@ -12,6 +12,7 @@ import type * as google from "../google.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_search from "../lib/search.js";
 import type * as naver from "../naver.js";
+import type * as photoFiles from "../photoFiles.js";
 import type * as photos from "../photos.js";
 import type * as shops from "../shops.js";
 import type * as translate from "../translate.js";
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/search": typeof lib_search;
   naver: typeof naver;
+  photoFiles: typeof photoFiles;
   photos: typeof photos;
   shops: typeof shops;
   translate: typeof translate;

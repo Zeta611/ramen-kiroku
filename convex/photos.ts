@@ -1,7 +1,6 @@
 import { v } from "convex/values"
-import { UTApi } from "uploadthing/server"
 
-import { action, mutation, query } from "./_generated/server"
+import { mutation, query } from "./_generated/server"
 import { requireOwner } from "./lib/auth"
 
 const photoInput = v.object({
@@ -120,27 +119,5 @@ export const removeFromVisit = mutation({
     )
 
     return [photo.key, photo.thumbKey]
-  },
-})
-
-export const deleteUploadThingFiles = action({
-  args: { keys: v.array(v.string()) },
-  handler: async (ctx, args) => {
-    await requireOwner(ctx)
-
-    const keys = args.keys.filter(Boolean)
-    if (keys.length === 0) return
-
-    const token = process.env.UPLOADTHING_TOKEN
-    if (!token) {
-      throw new Error("UPLOADTHING_TOKEN is not configured")
-    }
-
-    const utapi = new UTApi({ token })
-    const result = await utapi.deleteFiles(keys)
-
-    if (!result.success) {
-      throw new Error("UploadThing delete failed")
-    }
   },
 })

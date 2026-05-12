@@ -23,9 +23,8 @@ import {
   RiDeleteBinLine,
   RiDragMove2Line,
   RiImageAddLine,
-  RiSaveLine,
 } from "@remixicon/react"
-import { useAction, useMutation } from "convex/react"
+import { useAction } from "convex/react"
 import Image from "next/image"
 import * as React from "react"
 import { toast } from "sonner"
@@ -38,27 +37,24 @@ import { type UploadedPhoto, usePhotoUpload } from "@/components/photo-uploader"
 import { cn } from "@/lib/utils"
 
 export type ManagedPhoto = UploadedPhoto & {
-  _id: Id<"photos">
+  _id?: Id<"photos">
+  draftId: string
 }
 
 export function PhotoManager({
-  visitId,
-  initialPhotos,
+  photos,
+  onChange,
+  disabled = false,
 }: {
-  visitId: Id<"visits">
-  initialPhotos: ManagedPhoto[]
+  photos: ManagedPhoto[]
+  onChange: (photos: ManagedPhoto[]) => void
+  disabled?: boolean
 }) {
   const inputRef = React.useRef<HTMLInputElement | null>(null)
-  const [photos, setPhotos] = React.useState<ManagedPhoto[]>(initialPhotos)
-  const [savedOrder, setSavedOrder] = React.useState(
-    initialPhotos.map((photo) => photo._id).join(":")
+  const [deletingDraftId, setDeletingDraftId] = React.useState<string | null>(
+    null
   )
-  const [isSavingOrder, setIsSavingOrder] = React.useState(false)
-  const [deletingId, setDeletingId] = React.useState<Id<"photos"> | null>(null)
-  const addToVisit = useMutation(api.photos.addToVisit)
-  const reorderForVisit = useMutation(api.photos.reorderForVisit)
-  const removeFromVisit = useMutation(api.photos.removeFromVisit)
-  const deleteFiles = useAction(api.photos.deleteUploadThingFiles)
+  const deleteFiles = useAction(api.photoFiles.deleteUploadThingFiles)
   const { uploadPhotos, busy, buttonLabel } = usePhotoUpload({
     successMessage: false,
   })
@@ -67,91 +63,71 @@ export function PhotoManager({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  const currentOrder = photos.map((photo) => photo._id).join(":")
-  const hasOrderChanges = currentOrder !== savedOrder
+  function nextDraftPhoto(photo: UploadedPhoto): ManagedPhoto {
+    return {
+      ...photo,
+      draftId: `upload:${photo.key}`,
+    }
+  }
+
+  function publishPhotos(nextPhotos: ManagedPhoto[]) {
+    onChange(
+      nextPhotos.map((photo, sortOrder) => ({
+        ...photo,
+        sortOrder,
+      }))
+    )
+  }
 
   async function handleAdd(files: FileList | null) {
+    if (disabled) return
+
     const uploaded = await uploadPhotos(files, photos.length)
     if (inputRef.current) inputRef.current.value = ""
     if (!uploaded?.length) return
 
-    try {
-      const inserted = await addToVisit({ visitId, photos: uploaded })
-      setPhotos((current) => [...current, ...inserted])
-      setSavedOrder((current) =>
-        [
-          ...current.split(":").filter(Boolean),
-          ...inserted.map((p) => p._id),
-        ].join(":")
-      )
-      toast.success("Photos added")
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to add photos"
-      toast.error(message)
-    }
+    publishPhotos([...photos, ...uploaded.map(nextDraftPhoto)])
+    toast.success("Photos added")
   }
 
   async function handleDelete(photo: ManagedPhoto) {
-    if (!window.confirm("Delete this photo?")) return
+    if (disabled) return
 
-    setDeletingId(photo._id)
-    try {
-      const keys = await removeFromVisit({ photoId: photo._id })
-      setPhotos((current) => {
-        const next = current.filter((item) => item._id !== photo._id)
-        setSavedOrder(next.map((item) => item._id).join(":"))
-        return next
-      })
+    setDeletingDraftId(photo.draftId)
+    publishPhotos(photos.filter((item) => item.draftId !== photo.draftId))
+
+    if (!photo._id) {
       try {
-        await deleteFiles({ keys })
+        await deleteFiles({ keys: [photo.key, photo.thumbKey] })
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "UploadThing delete failed"
         toast.error(message)
       }
-      toast.success("Photo deleted")
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to delete photo"
-      toast.error(message)
-    } finally {
-      setDeletingId(null)
     }
+
+    setDeletingDraftId(null)
   }
 
   function handleDragEnd(event: DragEndEvent) {
+    if (disabled) return
+
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    setPhotos((current) => {
-      const oldIndex = current.findIndex((photo) => photo._id === active.id)
-      const newIndex = current.findIndex((photo) => photo._id === over.id)
-      if (oldIndex === -1 || newIndex === -1) return current
-      return arrayMove(current, oldIndex, newIndex)
-    })
+    const oldIndex = photos.findIndex((photo) => photo.draftId === active.id)
+    const newIndex = photos.findIndex((photo) => photo.draftId === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    publishPhotos(arrayMove(photos, oldIndex, newIndex))
   }
 
   function movePhoto(index: number, offset: number) {
+    if (disabled) return
+
     const nextIndex = index + offset
     if (nextIndex < 0 || nextIndex >= photos.length) return
-    setPhotos((current) => arrayMove(current, index, nextIndex))
-  }
-
-  async function saveOrder() {
-    setIsSavingOrder(true)
-    try {
-      const photoIds = photos.map((photo) => photo._id)
-      await reorderForVisit({ visitId, photoIds })
-      setSavedOrder(photoIds.join(":"))
-      toast.success("Photo order saved")
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to save photo order"
-      toast.error(message)
-    } finally {
-      setIsSavingOrder(false)
-    }
+    publishPhotos(arrayMove(photos, index, nextIndex))
   }
 
   return (
@@ -167,19 +143,11 @@ export function PhotoManager({
           <Button
             type="button"
             variant="outline"
-            disabled={busy}
+            disabled={disabled || busy}
             onClick={() => inputRef.current?.click()}
           >
-            <RiImageAddLine />
+            <RiImageAddLine data-icon="inline-start" />
             {buttonLabel}
-          </Button>
-          <Button
-            type="button"
-            disabled={!hasOrderChanges || isSavingOrder}
-            onClick={() => void saveOrder()}
-          >
-            <RiSaveLine />
-            {isSavingOrder ? "Saving" : "Save order"}
           </Button>
         </div>
       </div>
@@ -200,17 +168,18 @@ export function PhotoManager({
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={photos.map((photo) => photo._id)}
+            items={photos.map((photo) => photo.draftId)}
             strategy={horizontalListSortingStrategy}
           >
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {photos.map((photo, index) => (
                 <SortablePhoto
-                  key={photo._id}
+                  key={photo.draftId}
                   photo={photo}
                   index={index}
                   count={photos.length}
-                  deleting={deletingId === photo._id}
+                  disabled={disabled}
+                  deleting={deletingDraftId === photo.draftId}
                   onMove={movePhoto}
                   onDelete={() => void handleDelete(photo)}
                 />
@@ -231,6 +200,7 @@ function SortablePhoto({
   photo,
   index,
   count,
+  disabled,
   deleting,
   onMove,
   onDelete,
@@ -238,6 +208,7 @@ function SortablePhoto({
   photo: ManagedPhoto
   index: number
   count: number
+  disabled: boolean
   deleting: boolean
   onMove: (index: number, offset: number) => void
   onDelete: () => void
@@ -249,7 +220,7 @@ function SortablePhoto({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: photo._id })
+  } = useSortable({ id: photo.draftId, disabled })
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -278,7 +249,7 @@ function SortablePhoto({
           type="button"
           size="icon-xs"
           variant="outline"
-          disabled={index === 0}
+          disabled={disabled || index === 0}
           onClick={() => onMove(index, -1)}
         >
           <RiArrowLeftSLine />
@@ -289,6 +260,7 @@ function SortablePhoto({
           size="icon-xs"
           variant="outline"
           className="cursor-grab active:cursor-grabbing"
+          disabled={disabled}
           {...attributes}
           {...listeners}
         >
@@ -299,7 +271,7 @@ function SortablePhoto({
           type="button"
           size="icon-xs"
           variant="outline"
-          disabled={index === count - 1}
+          disabled={disabled || index === count - 1}
           onClick={() => onMove(index, 1)}
         >
           <RiArrowRightSLine />
@@ -309,7 +281,7 @@ function SortablePhoto({
           type="button"
           size="icon-xs"
           variant="destructive"
-          disabled={deleting}
+          disabled={disabled || deleting}
           onClick={onDelete}
         >
           <RiDeleteBinLine />
